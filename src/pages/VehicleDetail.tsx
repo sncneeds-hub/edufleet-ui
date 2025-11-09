@@ -248,12 +248,13 @@ export function VehicleDetail() {
           {/* Left Column - Images and Details */}
           <div className="lg:col-span-2 space-y-8">
             {/* Image Gallery */}
-            {!currentUser && images.length === 0 ? (
+            {!isAuthenticated ? (
               <Card>
-                <CardContent className="py-12 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Sign in to view vehicle photos</p>
-                  <Button onClick={() => navigate('/auth')}>Sign In</Button>
+                <CardContent className="py-24 text-center">
+                  <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Images Hidden</h3>
+                  <p className="text-muted-foreground mb-4">Sign in to view vehicle photos and detailed images</p>
+                  <Button onClick={() => navigate('/auth')}>Sign In to View</Button>
                 </CardContent>
               </Card>
             ) : (
@@ -270,10 +271,12 @@ export function VehicleDetail() {
                   {vehicle.brand} {vehicle.model}
                 </CardTitle>
                 <CardDescription>
-                  {vehicle.registrationNumber ? (
+                  {!isAuthenticated ? (
+                    <>Year: {vehicle.year} • Registration: Hidden (Sign in to view)</>
+                  ) : vehicle.registrationNumber ? (
                     <>Registration: {vehicle.registrationNumber} • Year: {vehicle.year}</>
                   ) : (
-                    <>Year: {vehicle.year} {!currentUser && ' • Sign in to view registration number'}</>
+                    <>Year: {vehicle.year} • Registration: Not provided</>
                   )}
                 </CardDescription>
               </CardHeader>
@@ -354,18 +357,24 @@ export function VehicleDetail() {
             {institute && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Institute Details</CardTitle>
+                  <CardTitle className="text-lg">Seller Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-sm font-semibold text-muted-foreground mb-1">Institute Name</p>
                     <p className="font-medium">{institute.instituteName}</p>
                   </div>
-                  {!currentUser ? (
+                  {!isAuthenticated ? (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Sign in to view complete contact details
+                      <AlertDescription className="space-y-2">
+                        <p className="font-medium">Contact information is hidden</p>
+                        <p className="text-sm">Sign in to view:</p>
+                        <ul className="text-sm list-disc list-inside ml-2">
+                          <li>Complete address</li>
+                          <li>Phone number</li>
+                          <li>Email address</li>
+                        </ul>
                       </AlertDescription>
                     </Alert>
                   ) : (
