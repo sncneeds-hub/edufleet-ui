@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
-import { Bus } from 'lucide-react'
+import { Bus, Home } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function AuthPage() {
@@ -52,6 +52,15 @@ export function AuthPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-4 left-4"
+            onClick={() => navigate('/')}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Home
+          </Button>
           <div className="flex justify-center mb-4">
             <Bus className="h-12 w-12 text-primary" />
           </div>

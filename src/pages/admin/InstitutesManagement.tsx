@@ -27,6 +27,9 @@ export function InstitutesManagement() {
   const loadInstitutes = async () => {
     try {
       const data = await api.institutes.getAll()
+
+      console.log('Institutes loaded:')
+      console.log(data)
       setInstitutes(data as Institute[])
     } catch (error) {
       toast.error('Failed to load institutes')
@@ -36,7 +39,7 @@ export function InstitutesManagement() {
   const handleApprove = async (institute: Institute) => {
     setLoading(true)
     try {
-      await api.institutes.approve(institute.id)
+      await api.institutes.approve(institute._id)
       toast.success(`${institute.instituteName} has been approved!`)
       loadInstitutes()
     } catch (error) {

@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { Bus, Search, Filter, RefreshCw } from 'lucide-react'
+import { Bus, Search, Filter, RefreshCw, User } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
 
 export function BrowseVehicles() {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
@@ -136,8 +138,26 @@ export function BrowseVehicles() {
             <h1 className="text-2xl font-bold text-foreground">EduFleet</h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
-            <Button onClick={() => navigate('/auth?mode=signup')}>Get Started</Button>
+            {isAuthenticated && user ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate(user.role === 'admin' ? '/dashboard' : '/school')}
+                  className="flex items-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  {user.displayName || user.email}
+                </Button>
+                <Button onClick={() => navigate(user.role === 'admin' ? '/dashboard' : '/school')}>
+                  Dashboard
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
+                <Button onClick={() => navigate('/auth?mode=signup')}>Get Started</Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -307,13 +327,16 @@ export function BrowseVehicles() {
                   Showing {filteredVehicles.length} of {vehicles.length} vehicles
                 </div>
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredVehicles.map((vehicle) => (
-                    <VehicleCard
-                      key={vehicle.id}
-                      vehicle={vehicle}
-                      onClick={() => navigate(`/vehicles/${vehicle.id}`)}
-                    />
-                  ))}
+                  {filteredVehicles.map((vehicle) => {
+                    const vehicleId = vehicle._id || vehicle.id
+                    return (
+                      <VehicleCard
+                        key={vehicleId}
+                        vehicle={vehicle}
+                        onClick={() => navigate(`/vehicles/${vehicleId}`)}
+                      />
+                    )
+                  })}
                 </div>
               </>
             ) : (

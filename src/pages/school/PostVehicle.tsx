@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { blink } from '@/lib/blink';
 import { api } from '@/lib/api';
 import { useFormDraft, FORM_KEYS } from '@/hooks/useStateRestoration';
 import { toast } from 'sonner';
@@ -146,7 +145,7 @@ export default function PostVehicle() {
 
     setIsSubmitting(true);
     try {
-      const user = await blink.auth.me();
+      const user = await api.auth.me();
       
       // Get institute ID from the user's metadata or institutes table
       const institute = await api.institutes.getByUserId(user.id);
@@ -184,7 +183,7 @@ export default function PostVehicle() {
         instituteName: institute.instituteName,
         vehicleType: data.vehicleType,
         brand: data.brand,
-        model: data.model,
+        vehicleModel: data.model,
         year: data.year,
         registrationNumber: data.registrationNumber,
         seatingCapacity: data.seatingCapacity,

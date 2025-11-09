@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { blink } from '@/lib/blink'
+import { api } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
@@ -16,15 +17,15 @@ export function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { setUser } = useAuth()
 
   const token = searchParams.get('token')
-  const projectId = searchParams.get('projectId')
 
   useEffect(() => {
-    if (!token || !projectId) {
+    if (!token) {
       setError('Invalid or expired reset link. Please request a new one.')
     }
-  }, [token, projectId])
+  }, [token])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,26 +40,29 @@ export function ResetPasswordPage() {
       return
     }
 
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters')
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
       return
     }
 
     setLoading(true)
 
     try {
-      // Confirm password reset using Blink SDK
-      await blink.auth.confirmPasswordReset(token, newPassword)
-      
+      const result = await api.auth.resetPassword(token, newPassword)
+      setUser(result.user)
       setSuccess(true)
       toast.success('Password reset successful!')
-      
-      setTimeout(() => {
-        navigate('/auth')
+      setTimeout(() => { 
+        // Redirect based on user role
+        if (result.user.role === 'admin') {
+          navigate('/admin/dashboard')
+        } else {
+          navigate('/school/dashboard')
+        }
       }, 2000)
     } catch (error: any) {
       console.error('Password reset failed:', error)
-      const errorMsg = error.message || 'Failed to reset password'
+      const errorMsg = error.response?.data?.error || 'Failed to reset password'
       setError(errorMsg)
       toast.error(errorMsg)
     } finally {
@@ -78,14 +82,8 @@ export function ResetPasswordPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-muted-foreground">
-              Your password has been successfully reset. You can now sign in with your new password.
+              Your password has been successfully reset. Redirecting to your dashboard...
             </p>
-            <Button 
-              className="w-full" 
-              onClick={() => navigate('/auth')}
-            >
-              Go to Sign In
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -144,12 +142,12 @@ export function ResetPasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                minLength={8}
+                minLength={6}
                 required
                 disabled={loading}
               />
               <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
+                Must be at least 6 characters
               </p>
             </div>
             <div className="space-y-2">
@@ -160,7 +158,7 @@ export function ResetPasswordPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                minLength={8}
+                minLength={6}
                 required
                 disabled={loading}
               />

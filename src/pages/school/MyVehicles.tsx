@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { blink } from '@/lib/blink';
 import { api } from '@/lib/api';
 import { SessionManager, FILTER_KEYS } from '@/lib/session';
 import { useStateRestoration } from '@/hooks/useStateRestoration';
@@ -15,7 +14,8 @@ import { Plus, Search, Trash2, Edit, Eye, CheckCircle2, Tag } from 'lucide-react
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 interface Vehicle {
-  id: string;
+  _id: string;
+  id?: string;
   vehicleType: string;
   make: string;
   model: string;
@@ -55,10 +55,10 @@ export default function MyVehicles() {
 
   const loadVehicles = useCallback(async () => {
     try {
-      const user = await blink.auth.me();
+      const user = await api.auth.me();
       
       // Get institute ID
-      const institute = await api.institutes.getByUserId(user.id);
+      const institute = await api.institutes.getByUserId(user._id || user.id);
 
       if (!institute) {
         setLoading(false);
@@ -66,7 +66,8 @@ export default function MyVehicles() {
       }
 
       // Fetch vehicles for this institute
-      const vehiclesData = await api.vehicles.getAll({ instituteId: institute.id });
+      const instituteId = institute._id || institute.id
+      const vehiclesData = await api.vehicles.getAll({ instituteId });
 
       setVehicles(vehiclesData);
       setFilteredVehicles(vehiclesData);
@@ -121,7 +122,7 @@ export default function MyVehicles() {
     try {
       await api.vehicles.delete(vehicleToDelete);
       toast.success('Vehicle deleted successfully');
-      setVehicles(prev => prev.filter(v => v.id !== vehicleToDelete));
+      setVehicles(prev => prev.filter(v => (v._id || v.id) !== vehicleToDelete));
       setDeleteDialogOpen(false);
       setVehicleToDelete(null);
     } catch (error) {
@@ -136,7 +137,7 @@ export default function MyVehicles() {
       await api.vehicles.markAsSold(vehicleId);
       toast.success('Vehicle marked as sold');
       setVehicles(prev => 
-        prev.map(v => v.id === vehicleId ? { ...v, soldStatus: 'sold' } : v)
+        prev.map(v => (v._id || v.id) === vehicleId ? { ...v, soldStatus: 'sold' } : v)
       );
     } catch (error) {
       console.error('Error marking as sold:', error);
@@ -231,11 +232,12 @@ export default function MyVehicles() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredVehicles.map((vehicle) => {
+            const vehicleId = vehicle._id || vehicle.id
             const images = JSON.parse(vehicle.images || '[]');
             const firstImage = images[0] || 'https://storage.googleapis.com/blink-core-storage/projects/edufleetphase30-3-sma0i152/images/generated-image-1762623375424-0.webp';
 
             return (
-              <Card key={vehicle.id} className="overflow-hidden">
+              <Card key={vehicleId} className="overflow-hidden">
                 <div className="aspect-[4/3] bg-muted relative">
                   <img
                     src={firstImage}
@@ -285,7 +287,7 @@ export default function MyVehicles() {
                           size="sm"
                           variant="outline"
                           className="flex-1 text-xs px-2 py-1 h-7"
-                          onClick={() => navigate(`/vehicles/${vehicle.id}`)}
+                          onClick={() => navigate(`/vehicles/${vehicleId}`)}
                         >
                           <Eye className="mr-1 h-3 w-3" />
                           View
@@ -294,7 +296,7 @@ export default function MyVehicles() {
                           size="sm"
                           variant="outline"
                           className="text-xs px-2 py-1 h-7"
-                          onClick={() => navigate(`/school/edit-vehicle/${vehicle.id}`)}
+                          onClick={() => navigate(`/school/edit-vehicle/${vehicleId}`)}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -303,7 +305,7 @@ export default function MyVehicles() {
                           variant="outline"
                           className="text-xs px-2 py-1 h-7"
                           onClick={() => {
-                            setVehicleToDelete(vehicle.id);
+                            setVehicleToDelete(vehicleId);
                             setDeleteDialogOpen(true);
                           }}
                         >

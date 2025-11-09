@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { blink } from '@/lib/blink'
 import { api } from '@/lib/api'
 import { Vehicle } from '@/types'
 import { ImageGallery } from '@/components/vehicle/ImageGallery'
@@ -10,12 +9,14 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Bus, MapPin, Phone, Mail, Fuel, Gauge, Users, Calendar, AlertCircle } from 'lucide-react'
+import { Bus, MapPin, Phone, Mail, Fuel, Gauge, Users, Calendar, AlertCircle, User } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Institute {
-  id: string
+  _id: string
+  id?: string
   instituteName: string
   institutePhone: string
   instituteEmail: string
@@ -25,6 +26,7 @@ interface Institute {
 export function VehicleDetail() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { user: currentUser, isAuthenticated } = useAuth()
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [institute, setInstitute] = useState<Institute | null>(null)
   const [loading, setLoading] = useState(true)
@@ -32,21 +34,10 @@ export function VehicleDetail() {
   const [contactPhone, setContactPhone] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [submittingInquiry, setSubmittingInquiry] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
     loadVehicleDetails()
-    loadCurrentUser()
   }, [id])
-
-  const loadCurrentUser = async () => {
-    try {
-      const user = await blink.auth.me()
-      setCurrentUser(user)
-    } catch (error) {
-      console.error('Failed to load current user:', error)
-    }
-  }
 
   const loadVehicleDetails = async () => {
     try {
@@ -56,17 +47,15 @@ export function VehicleDetail() {
         return
       }
 
-      const vehicleData = await blink.db.vehicles.list({
-        where: { id }
-      })
+      const vehicleData = await api.vehicles.getById(id)
 
-      if (vehicleData.length === 0) {
+      if (!vehicleData) {
         toast.error('Vehicle not found')
         navigate('/vehicles')
         return
       }
 
-      const v = vehicleData[0] as Vehicle
+      const v = vehicleData as Vehicle
 
       if (v.approvalStatus !== 'approved' || v.soldStatus !== 'available') {
         toast.error('This vehicle is no longer available')
@@ -77,16 +66,27 @@ export function VehicleDetail() {
       setVehicle(v)
 
       // Load institute details
-      const instituteData = await blink.db.institutes.list({
-        where: { id: v.instituteId }
-      })
-
-      if (instituteData.length > 0) {
-        setInstitute(instituteData[0] as Institute)
+      try {
+        const instituteId = v.instituteId
+        if (instituteId) {
+          const instituteData = await api.institutes.getById(instituteId)
+          if (instituteData) {
+            setInstitute(instituteData as Institute)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load institute:', error)
       }
-    } catch (error) {
-      console.error('Failed to load vehicle details:', error)
-      toast.error('Failed to load vehicle details')
+    } catch (error: any) {
+      // Network error - silently fail
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network')) {
+        console.log('Backend not available')
+        toast.error('Unable to load vehicle details')
+        navigate('/vehicles')
+      } else {
+        console.error('Failed to load vehicle details:', error)
+        toast.error('Failed to load vehicle details')
+      }
     } finally {
       setLoading(false)
     }
@@ -121,12 +121,15 @@ export function VehicleDetail() {
 
       setSubmittingInquiry(true)
 
+      const vehicleId = vehicle!._id || vehicle!.id
+      const senderInstituteId = senderInstitute._id || senderInstitute.id
+      
       await api.inquiries.create({
-        vehicleId: vehicle!.id,
+        vehicleId: vehicleId,
         vehicleBrand: vehicle!.brand,
-        vehicleModel: vehicle!.model,
+        vehicleModel: vehicle!.vehicleModel || vehicle!.model,
         vehiclePrice: vehicle!.price,
-        senderInstituteId: senderInstitute.id,
+        senderInstituteId: senderInstituteId,
         senderInstituteName: senderInstitute.instituteName,
         receiverInstituteId: vehicle!.instituteId,
         senderEmail: contactName,
@@ -214,10 +217,27 @@ export function VehicleDetail() {
             <Bus className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">EduFleet</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => navigate('/vehicles')}>Back</Button>
-            {currentUser && (
-              <Button onClick={() => navigate('/school')}>Dashboard</Button>
+            {isAuthenticated && currentUser ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center gap-2"
+                  onClick={() => navigate(currentUser.role === 'admin' ? '/dashboard' : '/school')}
+                >
+                  <User className="h-4 w-4" />
+                  {currentUser.displayName || currentUser.email}
+                </Button>
+                <Button onClick={() => navigate(currentUser.role === 'admin' ? '/dashboard' : '/school')}>
+                  Dashboard
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
+                <Button onClick={() => navigate('/auth?mode=signup')}>Get Started</Button>
+              </>
             )}
           </div>
         </div>

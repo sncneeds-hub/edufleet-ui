@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { blink } from '@/lib/blink';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +56,7 @@ export default function InstituteProfile() {
 
   const loadInstituteProfile = useCallback(async () => {
     try {
-      const user = await blink.auth.me();
+      const user = await api.auth.me();
       
       const institute = await api.institutes.getByUserId(user.id);
 
@@ -95,7 +94,7 @@ export default function InstituteProfile() {
   const onSubmit = async (data: InstituteFormData) => {
     setIsSubmitting(true);
     try {
-      const user = await blink.auth.me();
+      const user = await api.auth.me();
 
       if (isNewProfile) {
         // Create new institute profile

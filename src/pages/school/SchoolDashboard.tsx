@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { blink } from '@/lib/blink';
 import { api } from '@/lib/api';
 import { SessionManager, FILTER_KEYS } from '@/lib/session';
 import { useScrollRestoration } from '@/hooks/useStateRestoration';
@@ -44,7 +43,7 @@ export default function SchoolDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const user = await blink.auth.me();
+      const user = await api.auth.me();
 
       // Load institute profile
       const institute = await api.institutes.getByUserId(user.id);

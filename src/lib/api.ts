@@ -7,7 +7,8 @@ import axios, { AxiosInstance } from 'axios';
 import { Institute, Vehicle, ContactInquiry } from '../types';
 
 export interface Notification {
-  id: string;
+   _id: string;
+  id?: string;
   userId: string;
   type: 'institute_approved' | 'institute_rejected' | 'vehicle_approved' | 'vehicle_rejected' | 'inquiry_received' | 'inquiry_replied' | 'vehicle_sold';
   title: string;
@@ -70,6 +71,128 @@ class ApiClient {
     const response = await this.client.get('/health');
     return response.data;
   }
+
+  // Authentication API
+  auth = {
+    signup: async (data: {
+      email: string;
+      password: string;
+      displayName: string;
+      role: 'admin' | 'school';
+    }): Promise<{
+      user: {
+        id: string;
+        email: string;
+        displayName: string;
+        role: 'admin' | 'school';
+        approvalStatus: string;
+        metadata: {
+          role: string;
+          approvalStatus: string;
+        };
+      };
+      token: string;
+    }> => {
+      const response = await this.client.post('/auth/signup', data);
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+      }
+      return {
+        user: response.data.data,
+        token: response.data.token,
+      };
+    },
+
+    login: async (
+      email: string,
+      password: string
+    ): Promise<{
+      user: {
+        id: string;
+        email: string;
+        displayName: string;
+        role: 'admin' | 'school';
+        approvalStatus: string;
+        metadata: {
+          role: string;
+          approvalStatus: string;
+        };
+      };
+      token: string;
+    }> => {
+      const response = await this.client.post('/auth/login', { email, password });
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+      }
+      return {
+        user: response.data.data,
+        token: response.data.token,
+      };
+    },
+
+    me: async (): Promise<{
+      id: string;
+      email: string;
+      displayName: string;
+      role: 'admin' | 'school';
+      approvalStatus: string;
+      metadata: {
+        role: string;
+        approvalStatus: string;
+      };
+    }> => {
+      const response = await this.client.get('/auth/me');
+      return response.data.data;
+    },
+
+    logout: async (): Promise<void> => {
+      await this.client.post('/auth/logout');
+      // Remove token from localStorage
+      localStorage.removeItem('authToken');
+    },
+
+    forgotPassword: async (email: string): Promise<{ message: string }> => {
+      const response = await this.client.post('/auth/forgot-password', { email });
+      return {
+        message: response.data.message,
+      };
+    },
+
+    resetPassword: async (
+      token: string,
+      password: string
+    ): Promise<{
+      user: {
+        id: string;
+        email: string;
+        displayName: string;
+        role: 'admin' | 'school';
+        approvalStatus: string;
+        metadata: {
+          role: string;
+          approvalStatus: string;
+        };
+      };
+      token: string;
+      message: string;
+    }> => {
+      const response = await this.client.post('/auth/reset-password', {
+        token,
+        password,
+      });
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+      }
+      return {
+        user: response.data.data,
+        token: response.data.token,
+        message: response.data.message,
+      };
+    },
+  };
 
   // Institutes API
   institutes = {

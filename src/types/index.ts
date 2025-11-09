@@ -1,5 +1,6 @@
 export interface User {
-  id: string
+  _id: string
+  id?: string // Legacy support for backward compatibility
   email: string
   displayName?: string
   role: 'admin' | 'school'
@@ -14,7 +15,8 @@ export interface User {
 }
 
 export interface Institute {
-  id: string
+  _id: string
+  id?: string // Legacy support for backward compatibility
   userId: string
   instituteName: string
   registrationNumber: string
@@ -28,12 +30,14 @@ export interface Institute {
 }
 
 export interface Vehicle {
-  id: string
+  _id: string
+  id?: string // Legacy support for backward compatibility
   instituteId: string
   instituteName: string
   vehicleType: 'bus' | 'van' | 'minibus' | 'car' | 'other'
   brand: string
   model: string
+  vehicleModel?: string // Alternative property name from backend
   year: number
   registrationNumber: string
   seatingCapacity: number
@@ -52,7 +56,8 @@ export interface Vehicle {
 }
 
 export interface ContactInquiry {
-  id: string
+  _id: string
+  id?: string // Legacy support for backward compatibility
   vehicleId: string
   vehicleBrand?: string
   vehicleModel?: string

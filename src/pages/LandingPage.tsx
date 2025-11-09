@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Bus, Shield, CheckCircle, Users, ArrowRight } from 'lucide-react'
+import { Bus, Shield, CheckCircle, Users, ArrowRight, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { blink } from '@/lib/blink'
 import { api } from '@/lib/api'
 import { toast } from 'react-hot-toast'
 import { getVariant, trackConversion } from '@/lib/abTesting'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Vehicle {
   id: string
@@ -30,6 +30,7 @@ interface Stats {
 
 export function LandingPage() {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
   const [featuredVehicles, setFeaturedVehicles] = useState<Vehicle[]>([])
   const [stats, setStats] = useState<Stats>({ totalInstitutes: 0, totalVehicles: 0, totalSales: 0 })
   const [vehiclesLoading, setVehiclesLoading] = useState(true)
@@ -181,24 +182,9 @@ export function LandingPage() {
     navigate('/vehicles')
   }
 
-  const handleVehicleClick = async (vehicleId: string) => {
-    try {
-      const user = await blink.auth.me()
-      if (!user) {
-        toast.error('Please sign in to view vehicle details', {
-          duration: 3000
-        })
-        navigate('/auth')
-        return
-      }
-      navigate(`/vehicles/${vehicleId}`)
-    } catch (error) {
-      // User not logged in
-      toast.error('Please sign in to view vehicle details', {
-        duration: 3000
-      })
-      navigate('/auth')
-    }
+  const handleVehicleClick = (vehicleId: string) => {
+    // Allow all users (logged in or not) to view vehicle details
+    navigate(`/vehicles/${vehicleId}`)
   }
 
   return (
@@ -215,13 +201,35 @@ export function LandingPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hover:bg-primary/10" onClick={() => navigate('/auth')}>
-              Sign In
-            </Button>
-            <Button className="shadow-md hover:shadow-lg transition-all" onClick={() => navigate('/auth?mode=signup')}>
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            {isAuthenticated && user ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  className="hover:bg-primary/10 flex items-center gap-2"
+                  onClick={() => navigate(user.role === 'admin' ? '/dashboard' : '/school')}
+                >
+                  <User className="h-4 w-4" />
+                  {user.displayName || user.email}
+                </Button>
+                <Button 
+                  className="shadow-md hover:shadow-lg transition-all" 
+                  onClick={() => navigate(user.role === 'admin' ? '/dashboard' : '/school')}
+                >
+                  Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" className="hover:bg-primary/10" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
+                <Button className="shadow-md hover:shadow-lg transition-all" onClick={() => navigate('/auth?mode=signup')}>
+                  Get Started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>

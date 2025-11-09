@@ -1,5 +1,5 @@
 import { useEffect, useState, ReactNode } from 'react'
-import { blink } from '@/lib/blink'
+import { api } from '@/lib/api'
 import { User } from '@/types'
 import { SessionManager } from '@/lib/session'
 import { AuthContext } from './auth-context'
@@ -16,44 +16,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = blink.auth.onAuthStateChanged((state) => {
-      const userData = state.user as User | null
-      setUser(userData)
-      setIsLoading(state.isLoading)
-      setIsAuthenticated(state.isAuthenticated)
-
-      // Persist auth state and user data to session
-      SessionManager.saveAuthState(state.isAuthenticated, state.isLoading)
-      if (userData) {
-        SessionManager.saveUser(userData)
+    // Check if user is authenticated on mount
+    const checkAuth = async () => {
+      const token = localStorage.getItem('authToken')
+      if (token) {
+        try {
+          const userData = await api.auth.me()
+          const userWithMetadata = {
+            ...userData,
+            id: userData.id,
+            email: userData.email,
+            displayName: userData.displayName,
+            role: userData.role,
+            metadata: userData.metadata,
+          } as User
+          setUser(userWithMetadata)
+          setIsAuthenticated(true)
+          SessionManager.saveUser(userWithMetadata)
+          SessionManager.saveAuthState(true, false)
+        } catch (error) {
+          // Token is invalid, clear it
+          localStorage.removeItem('authToken')
+          setUser(null)
+          setIsAuthenticated(false)
+          SessionManager.clearAll()
+        }
       }
-    })
-    return unsubscribe
+      setIsLoading(false)
+    }
+
+    checkAuth()
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const userData = await blink.auth.signInWithEmail(email, password)
-    setUser(userData as User)
-    return userData
+    const { user: userData, token } = await api.auth.login(email, password)
+    const userWithMetadata = {
+      ...userData,
+      id: userData.id,
+      email: userData.email,
+      displayName: userData.displayName,
+      role: userData.role,
+      metadata: userData.metadata,
+    } as User
+    setUser(userWithMetadata)
+    setIsAuthenticated(true)
+    SessionManager.saveUser(userWithMetadata)
+    SessionManager.saveAuthState(true, false)
+    return userWithMetadata
   }
 
   const signUp = async (email: string, password: string, role: 'admin' | 'school', displayName: string) => {
-    const userData = await blink.auth.signUp({
+    const { user: userData, token } = await api.auth.signup({
       email,
       password,
       displayName,
-      metadata: {
-        role,
-        approvalStatus: role === 'school' ? 'pending' : 'approved'
-      }
-    } as any)
-    setUser(userData as User)
-    return userData
+      role,
+    })
+    const userWithMetadata = {
+      ...userData,
+      id: userData.id,
+      email: userData.email,
+      displayName: userData.displayName,
+      role: userData.role,
+      metadata: userData.metadata,
+    } as User
+    setUser(userWithMetadata)
+    setIsAuthenticated(true)
+    SessionManager.saveUser(userWithMetadata)
+    SessionManager.saveAuthState(true, false)
+    return userWithMetadata
   }
 
   const signOut = async () => {
-    await blink.auth.logout()
+    try {
+      await api.auth.logout()
+    } catch (error) {
+      // Ignore logout errors, just clear local state
+    }
     setUser(null)
+    setIsAuthenticated(false)
     // Clear all persisted session data on logout
     SessionManager.clearAll()
   }
