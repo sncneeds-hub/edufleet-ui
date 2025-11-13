@@ -10,7 +10,7 @@ import { blink } from '@/lib/blink'
 import { api } from '@/lib/api'
 import { ContactInquiry, Vehicle } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { 
   Mail, 
   Clock, 
@@ -92,6 +92,7 @@ export default function Inquiries() {
   }
 
   const markAsRead = async (inquiry: ContactInquiry) => {
+    const loadingToast = toast.loading('Updating status...')
     try {
       await api.inquiries.updateStatus(inquiry.id, 'read')
       
@@ -104,21 +105,24 @@ export default function Inquiries() {
         )
       )
       
-      toast.success('Marked as read')
+      toast.dismiss(loadingToast)
+      toast.success('✅ Marked as read')
     } catch (error) {
       console.error('Failed to mark as read:', error)
-      toast.error('Failed to update status')
+      toast.dismiss(loadingToast)
+      toast.error('❌ Failed to update status. Please try again.')
     }
   }
 
   const handleReply = async () => {
     if (!selectedInquiry || !replyMessage.trim()) {
-      toast.error('Please enter a reply message')
+      toast.error('⚠️ Please enter a reply message')
       return
     }
 
     try {
       setSendingReply(true)
+      const loadingToast = toast.loading('Sending reply...')
 
       // Send reply with message content
       const updatedInquiry = await api.inquiries.sendReply(selectedInquiry.id, replyMessage)
@@ -132,12 +136,13 @@ export default function Inquiries() {
         )
       )
 
-      toast.success('Reply sent successfully!')
+      toast.dismiss(loadingToast)
+      toast.success('✅ Reply sent successfully! Buyer will be notified via email.')
       setReplyMessage('')
       setSelectedInquiry(null)
     } catch (error) {
       console.error('Failed to send reply:', error)
-      toast.error('Failed to send reply')
+      toast.error('❌ Failed to send reply. Please try again.')
     } finally {
       setSendingReply(false)
     }

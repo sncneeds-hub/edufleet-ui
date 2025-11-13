@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Bus, Shield, CheckCircle, Users, ArrowRight, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
-import { toast } from 'react-hot-toast'
+import { toast } from 'sonner'
 import { getVariant, trackConversion } from '@/lib/abTesting'
 import { useAuth } from '@/hooks/useAuth'
+import { AdSection } from '@/components/ad/AdSection'
 
 interface Vehicle {
   id: string
@@ -41,9 +42,6 @@ export function LandingPage() {
   const secondaryCTAVariant = getVariant('secondaryCTA')
 
   useEffect(() => {
-    loadFeaturedData()
-    
-    // Show welcome toast with delay
     const timer = setTimeout(() => {
       toast.success('Welcome to EduFleet!', {
         description: 'India\'s most trusted educational vehicle marketplace',
@@ -54,8 +52,9 @@ export function LandingPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  const loadFeaturedData = async () => {
+  const loadFeaturedData = useCallback(async () => {
     try {
+      setVehiclesLoading(true)
       // Load featured vehicles (approved vehicles)
       const vehiclesData = await api.vehicles.getAll({
         status: 'approved',
@@ -65,21 +64,36 @@ export function LandingPage() {
       // Load institutes count
       const institutesData = await api.institutes.getAll('approved')
 
-      setFeaturedVehicles(vehiclesData.slice(0, 6) as Vehicle[])
-      setStats({
-        totalInstitutes: institutesData.length,
-        totalVehicles: vehiclesData.length,
-        totalSales: Math.floor(Math.random() * 50) + 100
-      })
+      // Ensure we have valid data before setting state
+      if (Array.isArray(vehiclesData) && Array.isArray(institutesData)) {
+        setFeaturedVehicles(vehiclesData.slice(0, 6) as Vehicle[])
+        setStats({
+          totalInstitutes: institutesData.length,
+          totalVehicles: vehiclesData.length,
+          totalSales: Math.floor(Math.random() * 50) + 100
+        })
+      } else {
+        // Invalid response format - use fallback
+        setFeaturedVehicles(getFallbackVehicles())
+        setStats(getFallbackStats())
+      }
     } catch (error: any) {
-      // Network error - use fallback data
-      console.log('Backend not available - using fallback data')
+      // Network error or other failure - use fallback data
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network') || !error.response) {
+        console.log('Backend not available - using fallback data')
+      } else {
+        console.error('Failed to load featured data:', error)
+      }
       setFeaturedVehicles(getFallbackVehicles())
       setStats(getFallbackStats())
     } finally {
       setVehiclesLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadFeaturedData()
+  }, [loadFeaturedData])
 
   // Fallback data in case backend is unavailable
   const getFallbackVehicles = (): Vehicle[] => [
@@ -174,7 +188,7 @@ export function LandingPage() {
   const handleRegisterClick = () => {
     trackConversion('heroHeadline', 'click')
     trackConversion('primaryCTA', 'click')
-    navigate('/auth?mode=signup')
+    navigate('/register')
   }
 
   const handleBrowseClick = () => {
@@ -201,6 +215,13 @@ export function LandingPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              className="hover:bg-primary/10"
+              onClick={() => navigate('/pricing')}
+            >
+              Pricing
+            </Button>
             {isAuthenticated && user ? (
               <>
                 <Button 
@@ -211,6 +232,15 @@ export function LandingPage() {
                   <User className="h-4 w-4" />
                   {user.displayName || user.email}
                 </Button>
+                {user.role === 'admin' && (
+                  <Button 
+                    variant="outline" 
+                    className="hover:border-primary hover:bg-primary/5" 
+                    onClick={() => navigate('/tasks')}
+                  >
+                    Tasks
+                  </Button>
+                )}
                 <Button 
                   className="shadow-md hover:shadow-lg transition-all" 
                   onClick={() => navigate(user.role === 'admin' ? '/dashboard' : '/school')}
@@ -224,7 +254,7 @@ export function LandingPage() {
                 <Button variant="ghost" className="hover:bg-primary/10" onClick={() => navigate('/auth')}>
                   Sign In
                 </Button>
-                <Button className="shadow-md hover:shadow-lg transition-all" onClick={() => navigate('/auth?mode=signup')}>
+                <Button className="shadow-md hover:shadow-lg transition-all" onClick={() => navigate('/register')}>
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -234,102 +264,170 @@ export function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section with Custom Illustration */}
-      <section className="relative py-24 px-4 overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
-        {/* Hero Background Image */}
-        <div 
-          className="absolute inset-0 opacity-[0.15] bg-center bg-cover bg-no-repeat"
-          style={{ 
-            backgroundImage: `url('https://storage.googleapis.com/blink-core-storage/projects/edufleetphase20-3-pghvye9r/images/generated-image-1762619100386-0.webp')`,
-            mixBlendMode: 'multiply'
-          }}
-        />
+      {/* Hero Section - Two Column Layout with Illustration */}
+      <section className="relative py-20 md:py-32 px-4 overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
+        {/* Enhanced Decorative elements with animation */}
+        <div className="absolute top-10 right-10 w-96 h-96 bg-primary/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 animate-float-up" style={{ animationDelay: '0s' }} />
+        <div className="absolute bottom-20 left-10 w-80 h-80 bg-accent/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 animate-float-up" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute top-1/2 left-1/4 w-60 h-60 bg-primary/5 rounded-full blur-2xl animate-float-up" style={{ animationDelay: '1s' }} />
         
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
-        
-        <div className="container mx-auto text-center max-w-5xl relative z-10">
-          <div className="inline-block mb-6 px-4 py-2 bg-primary/10 rounded-full animate-fade-in-up">
-            <span className="text-primary font-semibold text-sm">🚌 India's #1 Trusted Educational Vehicle Marketplace</span>
-          </div>
-          
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            {heroHeadlineVariant.content.split(' ').slice(0, -4).join(' ')}{' '}
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {heroHeadlineVariant.content.split(' ').slice(-4).join(' ')}
-            </span>
-          </h2>
-          
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            Join 500+ verified institutes buying and selling pre-owned buses, vans, and school vehicles 
-            through India's only admin-approved marketplace for education.
-          </p>
-          
-          <div className="flex gap-4 justify-center flex-wrap mb-12 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <Button 
-              size="lg" 
-              className="text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all hover:scale-105 group"
-              onClick={handleRegisterClick}
-            >
-              <Users className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-              {primaryCTAVariant.content}
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="text-lg px-8 py-6 border-2 hover:bg-primary/5 bg-white/80 backdrop-blur-sm"
-              onClick={handleBrowseClick}
-            >
-              {secondaryCTAVariant.content}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </div>
-          
-          {/* Trust indicators */}
-          <div className="flex gap-8 justify-center items-center text-sm text-muted-foreground flex-wrap animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <div className="flex items-center gap-2 hover:text-primary transition-colors cursor-default">
-              <Shield className="h-5 w-5 text-primary" />
-              <span>100% Admin Verified</span>
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Column - Content */}
+            <div className="text-center md:text-left">
+              {/* Badge with enhanced styling */}
+              <div className="inline-block mb-6 px-5 py-2.5 bg-white/70 backdrop-blur-md rounded-full border border-primary/20 animate-fade-in-up shadow-lg hover:shadow-xl transition-all group cursor-default">
+                <span className="text-primary font-semibold text-sm flex items-center gap-2">
+                  <span className="text-lg animate-bounce">🚌</span>
+                  India's #1 Trusted Educational Vehicle Marketplace
+                </span>
+              </div>
+              
+              {/* Main headline with enhanced styling */}
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                {heroHeadlineVariant.content.split(' ').slice(0, -4).join(' ')}{' '}
+                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent animate-pulse" style={{ '--duration': '3s' } as any}>
+                  {heroHeadlineVariant.content.split(' ').slice(-4).join(' ')}
+                </span>
+              </h2>
+              
+              {/* Subheadline */}
+              <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed animate-fade-in-up font-light" style={{ animationDelay: '0.2s' }}>
+                Connect with 500+ verified institutes. Buy and sell pre-owned buses, vans, and school vehicles 
+                through India's only <span className="font-semibold text-foreground">admin-approved</span> marketplace.
+              </p>
+              
+              {/* CTA Buttons with enhanced styling */}
+              <div className="flex gap-4 justify-center md:justify-start flex-wrap mb-10 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <Button 
+                  size="lg" 
+                  className="text-base md:text-lg px-8 md:px-10 py-6 md:py-7 shadow-2xl hover:shadow-2xl transition-all duration-300 hover:scale-110 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  onClick={handleRegisterClick}
+                >
+                  <Users className="mr-2 md:mr-3 h-5 md:h-6 w-5 md:w-6 group-hover:animate-bounce transition-transform" />
+                  {primaryCTAVariant.content}
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="text-base md:text-lg px-8 md:px-10 py-6 md:py-7 border-2 border-primary/30 hover:border-primary/60 bg-white/60 hover:bg-white/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 group"
+                  onClick={handleBrowseClick}
+                >
+                  {secondaryCTAVariant.content}
+                  <ArrowRight className="ml-2 md:ml-3 h-5 md:h-6 w-5 md:w-6 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+              
+              {/* Enhanced Trust indicators */}
+              <div className="flex gap-6 justify-center md:justify-start items-center text-sm flex-wrap animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                <div className="flex items-center gap-2 hover:text-primary transition-all cursor-default hover:scale-110 group">
+                  <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-foreground text-xs">100% Verified</div>
+                    <div className="text-[10px] text-muted-foreground">Admin approved</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 hover:text-primary transition-all cursor-default hover:scale-110 group">
+                  <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-foreground text-xs">Quality First</div>
+                    <div className="text-[10px] text-muted-foreground">Reviewed listings</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 hover:text-primary transition-all cursor-default hover:scale-110 group">
+                  <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
+                    <Bus className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-foreground text-xs">Zero Commission</div>
+                    <div className="text-[10px] text-muted-foreground">100% transparent</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 hover:text-primary transition-colors cursor-default">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              <span>Quality Approved Listings</span>
-            </div>
-            <div className="flex items-center gap-2 hover:text-primary transition-colors cursor-default">
-              <Bus className="h-5 w-5 text-primary" />
-              <span>Zero Commission Trading</span>
+
+            {/* Right Column - Illustration/Image */}
+            <div className="relative animate-fade-in-scale" style={{ animationDelay: '0.2s' }}>
+              <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/50 backdrop-blur-sm">
+                <img 
+                  src="https://storage.googleapis.com/blink-core-storage/projects/edufleetphase20-3-pghvye9r/images/generated-image-1762619100386-0.webp"
+                  alt="School Bus Fleet"
+                  className="w-full h-auto object-cover"
+                />
+                {/* Overlay gradient for better integration */}
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent pointer-events-none" />
+              </div>
+              
+              {/* Floating elements around illustration */}
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/20 rounded-2xl rotate-12 animate-float-up blur-sm" style={{ animationDelay: '0.5s' }} />
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent/30 rounded-full animate-float-up blur-sm" style={{ animationDelay: '1s' }} />
+              
+              {/* Stats badge floating on image */}
+              <div className="absolute top-4 -left-4 bg-white/95 backdrop-blur-md rounded-xl shadow-xl p-4 animate-slide-in-up border border-primary/20" style={{ animationDelay: '0.6s' }}>
+                <div className="text-3xl font-bold text-primary">500+</div>
+                <div className="text-xs text-muted-foreground">Verified Institutes</div>
+              </div>
+              
+              <div className="absolute bottom-4 -right-4 bg-white/95 backdrop-blur-md rounded-xl shadow-xl p-4 animate-slide-in-up border border-primary/20" style={{ animationDelay: '0.8s' }}>
+                <div className="text-3xl font-bold text-primary">100%</div>
+                <div className="text-xs text-muted-foreground">Safe & Secure</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Statistics Section with Animated Counters */}
-      <section className="py-16 px-4 bg-secondary/50">
+      <section className="py-20 px-4 bg-gradient-to-r from-secondary/30 via-secondary/50 to-secondary/30">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center group cursor-default">
-              <div className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
+            <div className="text-center group cursor-default hover:scale-105 transition-transform duration-300">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl mb-6 group-hover:shadow-lg transition-shadow">
+                <Users className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
                 {stats.totalInstitutes > 0 ? `${stats.totalInstitutes}+` : '500+'}
               </div>
-              <p className="text-foreground font-semibold">Verified Institutes</p>
-              <p className="text-sm text-muted-foreground mt-1">Trusted educational partners nationwide</p>
+              <p className="text-foreground font-semibold text-lg">Verified Institutes</p>
+              <p className="text-sm text-muted-foreground mt-2">Trusted educational partners nationwide</p>
             </div>
-            <div className="text-center group cursor-default">
-              <div className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
+            <div className="text-center group cursor-default hover:scale-105 transition-transform duration-300">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl mb-6 group-hover:shadow-lg transition-shadow">
+                <Bus className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
                 {stats.totalVehicles > 0 ? `${stats.totalVehicles}+` : '50+'}
               </div>
-              <p className="text-foreground font-semibold">Active Listings</p>
-              <p className="text-sm text-muted-foreground mt-1">Quality vehicles ready for sale</p>
+              <p className="text-foreground font-semibold text-lg">Active Listings</p>
+              <p className="text-sm text-muted-foreground mt-2">Quality vehicles ready for sale</p>
             </div>
-            <div className="text-center group cursor-default">
-              <div className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
+            <div className="text-center group cursor-default hover:scale-105 transition-transform duration-300">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl mb-6 group-hover:shadow-lg transition-shadow">
+                <CheckCircle className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition-transform tabular-nums">
                 {stats.totalSales > 0 ? `${stats.totalSales}+` : '150+'}
               </div>
-              <p className="text-foreground font-semibold">Successful Deals</p>
-              <p className="text-sm text-muted-foreground mt-1">Happy transactions & counting</p>
+              <p className="text-foreground font-semibold text-lg">Successful Deals</p>
+              <p className="text-sm text-muted-foreground mt-2">Happy transactions & counting</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Promoted Ads Section */}
+      <section className="py-16 px-4 bg-gradient-to-b from-secondary/20 to-white">
+        <div className="container mx-auto">
+          <AdSection 
+            pageLocation="landing" 
+            title="Featured Premium Vehicles"
+            className="mb-8"
+          />
         </div>
       </section>
 
@@ -360,12 +458,12 @@ export function LandingPage() {
             </div>
           ) : featuredVehicles.length > 0 ? (
             <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {featuredVehicles.map((vehicle) => {
+              {featuredVehicles.map((vehicle, index) => {
                 const featuredImage = getFeaturedImage(vehicle)
                 return (
                   <Card 
                     key={vehicle.id} 
-                    className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer border hover:border-primary/50 group hover:-translate-y-2" 
+                    className={`overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer border hover:border-primary/50 group hover:-translate-y-2 animate-slide-in-up vehicle-card-stagger-${(index % 6) + 1}`}
                     onClick={() => handleVehicleClick(vehicle.id)}
                   >
                     <div className="aspect-[3/2] bg-muted relative overflow-hidden flex items-center justify-center">
@@ -408,7 +506,7 @@ export function LandingPage() {
                 <p className="text-muted-foreground mb-6">
                   Be among the first institutions to list vehicles on EduFleet
                 </p>
-                <Button size="lg" onClick={() => navigate('/auth?mode=signup')}>
+                <Button size="lg" onClick={() => navigate('/register')}>
                   <Users className="mr-2 h-5 w-5" />
                   Register & List Your Vehicle
                 </Button>
@@ -419,40 +517,41 @@ export function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto">
+      <section className="py-24 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+        <div className="container mx-auto relative z-10">
           <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-4xl font-bold mb-4">Why Choose EduFleet?</h3>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+            <h3 className="text-4xl md:text-5xl font-bold mb-4">Why Choose EduFleet?</h3>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Built specifically for educational institutions with trust and transparency at its core
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-8 border-2 hover:border-primary/50 hover:shadow-xl transition-all group">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <Card className="p-8 border-2 border-primary/20 hover:border-primary/60 hover:shadow-2xl transition-all duration-300 group hover:-translate-y-2 bg-gradient-to-br from-white to-primary/2">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-125 transition-transform shadow-lg">
                 <Shield className="h-8 w-8 text-primary" />
               </div>
-              <h4 className="text-2xl font-semibold mb-3">100% Verified Partners</h4>
+              <h4 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">100% Verified Partners</h4>
               <p className="text-muted-foreground leading-relaxed">
               Every educational institution is manually verified by our admin team before approval. 
               Zero fake listings, zero scams – only genuine institutes you can trust.
               </p>
             </Card>
-            <Card className="p-8 border-2 hover:border-primary/50 hover:shadow-xl transition-all group">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <Card className="p-8 border-2 border-primary/20 hover:border-primary/60 hover:shadow-2xl transition-all duration-300 group hover:-translate-y-2 bg-gradient-to-br from-white to-primary/2">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-125 transition-transform shadow-lg">
                 <CheckCircle className="h-8 w-8 text-primary" />
               </div>
-              <h4 className="text-2xl font-semibold mb-3">Quality-Checked Listings</h4>
+              <h4 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">Quality-Checked Listings</h4>
               <p className="text-muted-foreground leading-relaxed">
               Every vehicle ad is reviewed for accuracy and completeness before going live. 
               No spam, no low-quality posts – browse with peace of mind.
               </p>
             </Card>
-            <Card className="p-8 border-2 hover:border-primary/50 hover:shadow-xl transition-all group">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <Card className="p-8 border-2 border-primary/20 hover:border-primary/60 hover:shadow-2xl transition-all duration-300 group hover:-translate-y-2 bg-gradient-to-br from-white to-primary/2">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-125 transition-transform shadow-lg">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <h4 className="text-2xl font-semibold mb-3">Zero Commission Model</h4>
+              <h4 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">Zero Commission Model</h4>
               <p className="text-muted-foreground leading-relaxed">
               Connect directly with buyers and sellers – no middlemen eating into your budget. 
               Keep 100% of your sale price with our completely free platform.
@@ -579,7 +678,12 @@ export function LandingPage() {
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/auth?mode=signup')} className="hover:text-primary transition-colors">
+                  <button onClick={() => navigate('/pricing')} className="hover:text-primary transition-colors">
+                    Pricing Plans
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/register')} className="hover:text-primary transition-colors">
                     Register Institute
                   </button>
                 </li>

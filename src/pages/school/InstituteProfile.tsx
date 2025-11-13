@@ -11,9 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Building2, Mail, Phone, MapPin, FileText, Save, AlertCircle } from 'lucide-react';
+import { Loader2, Building2, Mail, Phone, MapPin, FileText, Save, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { VerificationBadge } from '@/components/verification/VerificationBadge';
+import { GetVerifiedDialog } from '@/components/verification/GetVerifiedDialog';
+import type { VerificationStatus } from '@/types';
 
 const instituteSchema = z.object({
   name: z.string().min(3, 'Institute name must be at least 3 characters'),
@@ -44,6 +47,9 @@ export default function InstituteProfile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [institute, setInstitute] = useState<InstituteDB | null>(null);
   const [isNewProfile, setIsNewProfile] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [loadingVerification, setLoadingVerification] = useState(false);
 
   const {
     register,
@@ -53,6 +59,20 @@ export default function InstituteProfile() {
   } = useForm<InstituteFormData>({
     resolver: zodResolver(instituteSchema),
   });
+
+  const loadVerificationStatus = useCallback(async () => {
+    if (isNewProfile) return;
+    
+    try {
+      setLoadingVerification(true);
+      const status = await api.verification.getStatus();
+      setVerificationStatus(status);
+    } catch (error) {
+      console.error('Error loading verification status:', error);
+    } finally {
+      setLoadingVerification(false);
+    }
+  }, [isNewProfile]);
 
   const loadInstituteProfile = useCallback(async () => {
     try {
@@ -90,6 +110,12 @@ export default function InstituteProfile() {
   useEffect(() => {
     loadInstituteProfile();
   }, [loadInstituteProfile]);
+
+  useEffect(() => {
+    if (!isNewProfile && institute) {
+      loadVerificationStatus();
+    }
+  }, [isNewProfile, institute, loadVerificationStatus]);
 
   const onSubmit = async (data: InstituteFormData) => {
     setIsSubmitting(true);
@@ -183,14 +209,65 @@ export default function InstituteProfile() {
                   : 'Manage your institute information'}
               </CardDescription>
             </div>
-            {institute && (
-              <Badge variant={getStatusBadgeVariant(institute.approvalStatus)}>
-                {institute.approvalStatus.charAt(0).toUpperCase() + institute.approvalStatus.slice(1)}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {institute && (
+                <Badge variant={getStatusBadgeVariant(institute.approvalStatus)}>
+                  {institute.approvalStatus.charAt(0).toUpperCase() + institute.approvalStatus.slice(1)}
+                </Badge>
+              )}
+              {!isNewProfile && institute && (
+                <VerificationBadge
+                  isVerified={institute.isVerified}
+                  verificationExpiresAt={institute.verificationExpiresAt}
+                  size="md"
+                  showTooltip={true}
+                />
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {/* Verification CTA */}
+          {!isNewProfile && institute?.approvalStatus === 'approved' && !loadingVerification && (
+            <>
+              {!verificationStatus?.isVerified && (
+                <Alert className="mb-6 border-blue-500 bg-blue-50">
+                  <ShieldCheck className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <div>
+                      <strong>Get Verified</strong> - Build trust and increase visibility with a verified badge
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setShowVerificationDialog(true)}
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Get Verified
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {verificationStatus?.needsRenewal && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <div>
+                      <strong>Verification Expired</strong> - Renew to continue enjoying verified benefits
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowVerificationDialog(true)}
+                    >
+                      Renew Now
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+
           {institute?.approvalStatus === 'rejected' && institute.rejectionReason && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
@@ -380,6 +457,17 @@ export default function InstituteProfile() {
           </form>
         </CardContent>
         </Card>
+
+        {/* Verification Dialog */}
+        <GetVerifiedDialog
+          open={showVerificationDialog}
+          onOpenChange={setShowVerificationDialog}
+          verificationStatus={verificationStatus || undefined}
+          onSuccess={() => {
+            loadInstituteProfile();
+            loadVerificationStatus();
+          }}
+        />
       </div>
     </DashboardLayout>
   );

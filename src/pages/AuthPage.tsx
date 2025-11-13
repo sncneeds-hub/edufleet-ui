@@ -1,25 +1,35 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
-import { Bus, Home } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Bus, Home, Check } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function AuthPage() {
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState<'admin' | 'school'>('school')
+  const [selectedPlan, setSelectedPlan] = useState<'Silver' | 'Gold' | 'Platinum'>('Silver')
   const [loading, setLoading] = useState(false)
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
+
+  // Extract selected plan from location state (from pricing page)
+  useEffect(() => {
+    if (location.state?.selectedPlan) {
+      setSelectedPlan(location.state.selectedPlan as 'Silver' | 'Gold' | 'Platinum')
+      setMode('signup')
+    }
+  }, [location.state])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,10 +43,10 @@ export function AuthPage() {
         const userRole = (userData as any)?.role || role
         navigate(userRole === 'admin' ? '/dashboard' : '/school')
       } else {
-        const userData = await signUp(email, password, role, displayName)
+        const userData = await signUp(email, password, role, displayName, role === 'school' ? selectedPlan : undefined)
         toast.success('Account created successfully!')
         if (role === 'school') {
-          toast.success('Your institute registration is pending admin approval.')
+          toast.success(`Your ${selectedPlan} plan subscription is pending activation.`)
         }
         // Navigate based on role selected during signup
         navigate(role === 'admin' ? '/dashboard' : '/school')
@@ -100,6 +110,43 @@ export function AuthPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {role === 'school' && (
+                  <div className="space-y-2">
+                    <Label>Subscription Plan</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Silver', 'Gold', 'Platinum'].map((plan) => (
+                        <Button
+                          key={plan}
+                          type="button"
+                          variant={selectedPlan === plan ? 'default' : 'outline'}
+                          className="flex flex-col h-auto py-3 relative"
+                          onClick={() => setSelectedPlan(plan as 'Silver' | 'Gold' | 'Platinum')}
+                        >
+                          {selectedPlan === plan && (
+                            <Check className="h-4 w-4 absolute top-2 right-2" />
+                          )}
+                          <span className="font-semibold">{plan}</span>
+                          <span className="text-xs mt-1">
+                            {plan === 'Silver' && '₹2,999/mo'}
+                            {plan === 'Gold' && '₹5,999/mo'}
+                            {plan === 'Platinum' && '₹9,999/mo'}
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      You can upgrade or change your plan anytime after registration.{' '}
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-xs" 
+                        onClick={() => navigate('/pricing')}
+                        type="button"
+                      >
+                        View plan details
+                      </Button>
+                    </p>
+                  </div>
+                )}
               </>
             )}
             <div className="space-y-2">

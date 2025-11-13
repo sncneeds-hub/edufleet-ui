@@ -1,5 +1,5 @@
 import imageCompression from 'browser-image-compression';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export interface ImageValidationResult {
   valid: boolean;
@@ -15,6 +15,7 @@ export interface ImageDimensions {
 // Image validation constants
 export const IMAGE_VALIDATION = {
   MAX_SIZE_MB: 5,
+  MAX_SIZE_BYTES: 5 * 1024 * 1024, // 5MB in bytes
   MAX_COMPRESSED_SIZE_MB: 2,
   MIN_WIDTH: 400,
   MIN_HEIGHT: 300,
@@ -68,28 +69,63 @@ const checkAspectRatio = (width: number, height: number): string | null => {
 };
 
 /**
- * Validate image file before upload
+ * Validate image file before upload with enhanced client-side checks
  */
 export const validateImageFile = async (
   file: File
 ): Promise<ImageValidationResult> => {
   const warnings: string[] = [];
 
-  // Check file type
-  if (!IMAGE_VALIDATION.ALLOWED_FORMATS.includes(file.type)) {
+  // Check if file exists
+  if (!file) {
     return {
       valid: false,
-      error: `Invalid file format. Only JPEG, PNG, and WebP images are allowed.`,
+      error: 'No file provided.',
     };
   }
 
-  // Check file size
-  const fileSizeMB = file.size / (1024 * 1024);
-  if (fileSizeMB > IMAGE_VALIDATION.MAX_SIZE_MB) {
+  // Check file type by MIME type
+  if (!IMAGE_VALIDATION.ALLOWED_FORMATS.includes(file.type)) {
     return {
       valid: false,
-      error: `File size (${fileSizeMB.toFixed(1)}MB) exceeds maximum allowed size of ${IMAGE_VALIDATION.MAX_SIZE_MB}MB.`,
+      error: `Invalid file format. Only JPEG, PNG, and WebP images are allowed. Received: ${file.type || 'unknown'}`,
     };
+  }
+
+  // Check file extension as secondary validation
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = IMAGE_VALIDATION.ALLOWED_EXTENSIONS.some(ext => 
+    fileName.endsWith(ext)
+  );
+  if (!hasValidExtension) {
+    return {
+      valid: false,
+      error: `Invalid file extension. Only .jpg, .jpeg, .png, and .webp files are allowed.`,
+    };
+  }
+
+  // Check file size in bytes (more precise)
+  if (file.size > IMAGE_VALIDATION.MAX_SIZE_BYTES) {
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    return {
+      valid: false,
+      error: `File size (${fileSizeMB}MB) exceeds maximum allowed size of ${IMAGE_VALIDATION.MAX_SIZE_MB}MB. Please compress or resize the image.`,
+    };
+  }
+
+  // Check for suspiciously small files (likely corrupted or not an image)
+  if (file.size < 1024) { // Less than 1KB
+    return {
+      valid: false,
+      error: 'File is too small to be a valid image. Please upload a different file.',
+    };
+  }
+
+  const fileSizeMB = file.size / (1024 * 1024);
+  
+  // Warn if file is large but within limits
+  if (fileSizeMB > 3 && fileSizeMB <= IMAGE_VALIDATION.MAX_SIZE_MB) {
+    warnings.push(`Large file size (${fileSizeMB.toFixed(1)}MB). Image will be compressed for better performance.`);
   }
 
   // Get image dimensions
@@ -174,6 +210,56 @@ export const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+/**
+ * Quick validation for file input before processing
+ * Use this for instant feedback on file selection
+ */
+export const quickValidateImage = (file: File): { valid: boolean; error?: string } => {
+  // Check file exists
+  if (!file) {
+    return { valid: false, error: 'No file selected' };
+  }
+
+  // Check file type
+  if (!IMAGE_VALIDATION.ALLOWED_FORMATS.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Invalid format. Only JPEG, PNG, and WebP allowed. Got: ${file.type || 'unknown'}`,
+    };
+  }
+
+  // Check file extension
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = IMAGE_VALIDATION.ALLOWED_EXTENSIONS.some(ext =>
+    fileName.endsWith(ext)
+  );
+  if (!hasValidExtension) {
+    return {
+      valid: false,
+      error: 'Invalid file extension. Use .jpg, .jpeg, .png, or .webp',
+    };
+  }
+
+  // Check file size
+  if (file.size > IMAGE_VALIDATION.MAX_SIZE_BYTES) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    return {
+      valid: false,
+      error: `File too large (${sizeMB}MB). Maximum: ${IMAGE_VALIDATION.MAX_SIZE_MB}MB`,
+    };
+  }
+
+  // Check minimum size
+  if (file.size < 1024) {
+    return {
+      valid: false,
+      error: 'File too small. Not a valid image',
+    };
+  }
+
+  return { valid: true };
 };
 
 /**

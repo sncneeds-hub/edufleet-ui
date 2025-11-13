@@ -4,11 +4,11 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-import { Institute, Vehicle, ContactInquiry } from '../types';
+import { Institute, Vehicle, ContactInquiry, VerificationStatus, VerificationOrder } from '../types';
 
 export interface Notification {
-   _id: string;
-  id?: string;
+  _id: string;
+  id?: string; // Legacy support for backward compatibility
   userId: string;
   type: 'institute_approved' | 'institute_rejected' | 'vehicle_approved' | 'vehicle_rejected' | 'inquiry_received' | 'inquiry_replied' | 'vehicle_sold';
   title: string;
@@ -59,11 +59,85 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        // Silently pass through errors - let components handle them
-        // (This is expected in deployed environments where backend isn't available)
+        // Enhanced centralized error logging
+        const errorDetails = {
+          timestamp: new Date().toISOString(),
+          url: error.config?.url,
+          method: error.config?.method?.toUpperCase(),
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          message: error.response?.data?.error || error.message,
+          data: error.response?.data,
+        };
+
+        // Log to console in development
+        if (import.meta.env.DEV) {
+          console.error('API Error:', errorDetails);
+        }
+
+        // Log structured error for monitoring
+        this.logError(errorDetails);
+
+        // Handle specific error cases
+        if (error.response?.status === 401) {
+          // Unauthorized - clear token and potentially redirect
+          localStorage.removeItem('authToken');
+          console.warn('Authentication expired. Please login again.');
+        } else if (error.response?.status === 429) {
+          // Rate limit exceeded
+          console.warn('Rate limit exceeded. Please try again later.');
+        } else if (error.response?.status === 403) {
+          // Forbidden
+          console.warn('Access forbidden. You do not have permission for this action.');
+        } else if (!error.response) {
+          // Network error
+          console.warn('Network error. Please check your connection.');
+        }
+
         return Promise.reject(error);
       }
     );
+  }
+
+  /**
+   * Log errors to external monitoring service (placeholder for future integration)
+   */
+  private logError(errorDetails: any): void {
+    // Store recent errors in localStorage for debugging
+    try {
+      const recentErrors = JSON.parse(localStorage.getItem('api_errors') || '[]');
+      recentErrors.push(errorDetails);
+      
+      // Keep only last 20 errors
+      if (recentErrors.length > 20) {
+        recentErrors.shift();
+      }
+      
+      localStorage.setItem('api_errors', JSON.stringify(recentErrors));
+    } catch (e) {
+      // Silently fail if localStorage is full
+    }
+
+    // TODO: Send to external monitoring service (e.g., Sentry, LogRocket)
+    // Example: Sentry.captureException(new Error(errorDetails.message), { extra: errorDetails });
+  }
+
+  /**
+   * Get recent API errors for debugging
+   */
+  getRecentErrors(): any[] {
+    try {
+      return JSON.parse(localStorage.getItem('api_errors') || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Clear error logs
+   */
+  clearErrorLogs(): void {
+    localStorage.removeItem('api_errors');
   }
 
   // Health check
@@ -79,6 +153,7 @@ class ApiClient {
       password: string;
       displayName: string;
       role: 'admin' | 'school';
+      subscriptionPlan?: 'Silver' | 'Gold' | 'Platinum';
     }): Promise<{
       user: {
         id: string;
@@ -234,6 +309,19 @@ class ApiClient {
     delete: async (id: string): Promise<void> => {
       await this.client.delete(`/institutes/${id}`);
     },
+
+    setPriority: async (id: string, isPriority: boolean, expiresAt?: Date): Promise<Institute> => {
+      const response = await this.client.patch(`/institutes/${id}/priority`, {
+        isPriority,
+        expiresAt: expiresAt?.toISOString(),
+      });
+      return response.data.data;
+    },
+
+    getPriorityList: async (): Promise<Institute[]> => {
+      const response = await this.client.get('/institutes/priority/list');
+      return response.data.data;
+    },
   };
 
   // Vehicles API
@@ -252,6 +340,13 @@ class ApiClient {
       instituteId?: string;
     }): Promise<Vehicle[]> => {
       const response = await this.client.get('/vehicles', { params: filters });
+      return response.data.data;
+    },
+
+    getRelated: async (vehicleId: string, limit?: number): Promise<any[]> => {
+      const response = await this.client.get(`/related-vehicles/${vehicleId}`, {
+        params: { limit: limit || 6 },
+      });
       return response.data.data;
     },
 
@@ -299,6 +394,35 @@ class ApiClient {
       const response = await this.client.get('/vehicles/stats/summary', {
         params: { instituteId },
       });
+      return response.data.data;
+    },
+
+    promote: async (
+      id: string,
+      data: {
+        isPromoted: boolean;
+        adPrice?: number;
+        adBudget?: number;
+        adPlacements?: ('landing' | 'browse' | 'detail')[];
+      }
+    ): Promise<Vehicle> => {
+      const response = await this.client.patch(`/vehicles/${id}/promote`, data);
+      return response.data.data;
+    },
+
+    getAdsByPage: async (pageLocation: 'landing' | 'browse' | 'detail'): Promise<Vehicle[]> => {
+      const response = await this.client.get(`/vehicles/ads/${pageLocation}`);
+      return response.data.data;
+    },
+
+    toggleFeatured: async (
+      id: string,
+      data: {
+        isFeatured: boolean;
+        durationDays?: number;
+      }
+    ): Promise<Vehicle> => {
+      const response = await this.client.patch(`/vehicles/${id}/feature`, data);
       return response.data.data;
     },
   };
@@ -366,6 +490,117 @@ class ApiClient {
     },
   };
 
+  // Ad Tracking API
+  adTracking = {
+    recordImpression: async (
+      vehicleId: string,
+      pageLocation: 'landing' | 'browse' | 'detail',
+      sessionId: string,
+      referrer?: string
+    ): Promise<void> => {
+      await this.client.post('/adviews/impression', {
+        vehicleId,
+        pageLocation,
+        sessionId,
+        referrer,
+      });
+    },
+
+    recordClick: async (
+      vehicleId: string,
+      pageLocation: 'landing' | 'browse' | 'detail',
+      sessionId: string
+    ): Promise<void> => {
+      await this.client.post('/adviews/click', {
+        vehicleId,
+        pageLocation,
+        sessionId,
+      });
+    },
+
+    getStats: async (filters?: {
+      vehicleId?: string;
+      instituteId?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<{
+      impressions: number;
+      clicks: number;
+      ctr: string;
+    }> => {
+      const response = await this.client.get('/adviews/stats', { params: filters });
+      return response.data.data;
+    },
+
+    getRevenue: async (filters?: {
+      startDate?: string;
+      endDate?: string;
+    }): Promise<{
+      totalRevenue: number;
+      vehicles: any[];
+    }> => {
+      const response = await this.client.get('/adviews/revenue', { params: filters });
+      return response.data.data;
+    },
+  };
+
+  // Inquiry Analytics API
+  inquiryAnalytics = {
+    getSchoolStats: async (): Promise<{
+      totalInquiries: number;
+      totalReplied: number;
+      responseRate: number;
+      averageResponseTime: number;
+      topPerformingVehicles: any[];
+      leastPerformingVehicles: any[];
+      inquiryTrend: Array<{ date: string; count: number }>;
+      responseTrend: Array<{ date: string; responded: number; pending: number }>;
+      statusBreakdown: {
+        pending: number;
+        responded: number;
+        contacted: number;
+      };
+    }> => {
+      const response = await this.client.get('/inquiry-analytics/school-stats');
+      return response.data.data;
+    },
+
+    getVehicleMetrics: async (vehicleId: string): Promise<{
+      vehicleId: string;
+      brand: string;
+      model: string;
+      totalInquiries: number;
+      repliedInquiries: number;
+      responseRate: number;
+      averageResponseTime: number;
+      lastInquiryDate: string | null;
+      inquiryTrend: Array<{ date: string; count: number }>;
+    }> => {
+      const response = await this.client.get(`/inquiry-analytics/vehicle/${vehicleId}`);
+      return response.data.data;
+    },
+
+    getStatsByDateRange: async (startDate: string, endDate: string): Promise<{
+      totalInquiries: number;
+      responded: number;
+      pending: number;
+      averageResponseTime: number;
+      responseRate: number;
+    }> => {
+      const response = await this.client.get('/inquiry-analytics/date-range', {
+        params: { startDate, endDate },
+      });
+      return response.data.data;
+    },
+
+    exportCSV: async (): Promise<Blob> => {
+      const response = await this.client.get('/inquiry-analytics/export-csv', {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+  };
+
   // Notifications API
   notifications = {
     getAll: async (filters?: {
@@ -402,6 +637,263 @@ class ApiClient {
       await this.client.delete('/notifications/clear-read');
     },
   };
+
+  // Payments API (Razorpay)
+  payments = {
+    createOrder: async (
+      plan: 'Silver' | 'Gold' | 'Platinum',
+      duration: 'monthly' | 'quarterly' | 'yearly'
+    ): Promise<{
+      orderId: string;
+      amount: number;
+      currency: string;
+      keyId: string;
+    }> => {
+      const response = await this.client.post('/payments/create-order', {
+        plan,
+        duration,
+      });
+      return response.data.data;
+    },
+
+    verifyPayment: async (
+      razorpay_order_id: string,
+      razorpay_payment_id: string,
+      razorpay_signature: string,
+      plan: 'Silver' | 'Gold' | 'Platinum',
+      duration: 'monthly' | 'quarterly' | 'yearly'
+    ): Promise<Institute> => {
+      const response = await this.client.post('/payments/verify-payment', {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        plan,
+        duration,
+      });
+      return response.data.data;
+    },
+
+    getHistory: async (): Promise<any[]> => {
+      const response = await this.client.get('/payments/history');
+      return response.data.data;
+    },
+
+    getPricing: async (): Promise<any> => {
+      const response = await this.client.get('/payments/pricing');
+      return response.data.data;
+    },
+  };
+
+  // Subscriptions API
+  subscriptions = {
+    activate: async (
+      instituteId: string,
+      plan: 'Silver' | 'Gold' | 'Platinum',
+      durationMonths?: number
+    ): Promise<Institute> => {
+      const response = await this.client.post(`/subscriptions/${instituteId}/activate`, {
+        plan,
+        durationMonths: durationMonths || 1,
+      });
+      return response.data.data;
+    },
+
+    cancel: async (instituteId: string, reason?: string): Promise<Institute> => {
+      const response = await this.client.post(`/subscriptions/${instituteId}/cancel`, { reason });
+      return response.data.data;
+    },
+
+    extend: async (instituteId: string, additionalMonths: number): Promise<Institute> => {
+      const response = await this.client.post(`/subscriptions/${instituteId}/extend`, {
+        additionalMonths,
+      });
+      return response.data.data;
+    },
+
+    changePlan: async (instituteId: string, newPlan: 'Silver' | 'Gold' | 'Platinum'): Promise<Institute> => {
+      const response = await this.client.post(`/subscriptions/${instituteId}/change-plan`, {
+        newPlan,
+      });
+      return response.data.data;
+    },
+
+    getStatus: async (): Promise<{
+      subscriptionPlan?: string;
+      subscriptionStatus?: string;
+      subscriptionStartDate?: string;
+      subscriptionEndDate?: string;
+      limits: {
+        maxVehicles: number;
+        listingDuration: number;
+        searchBoost: number;
+        featuredBadge: boolean;
+        homepagePromotion: boolean;
+        prioritySupport: boolean;
+        customBranding?: boolean;
+        dedicatedManager?: boolean;
+      };
+    }> => {
+      const response = await this.client.get('/subscriptions/status');
+      return response.data.data;
+    },
+
+    getAll: async (filters?: {
+      status?: string;
+      plan?: string;
+    }): Promise<Institute[]> => {
+      const response = await this.client.get('/subscriptions/all', { params: filters });
+      return response.data.data;
+    },
+  };
+
+  // Verification API
+  verification = {
+    createOrder: async (
+      verificationType: 'oneTime' | 'renewal' = 'oneTime'
+    ): Promise<VerificationOrder> => {
+      const response = await this.client.post('/verification/create-order', {
+        verificationType,
+      });
+      return response.data.data;
+    },
+
+    verifyPayment: async (
+      razorpay_order_id: string,
+      razorpay_payment_id: string,
+      razorpay_signature: string,
+      verificationType: 'oneTime' | 'renewal' = 'oneTime'
+    ): Promise<Institute> => {
+      const response = await this.client.post('/verification/verify-payment', {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        verificationType,
+      });
+      return response.data.data;
+    },
+
+    getStatus: async (): Promise<VerificationStatus> => {
+      const response = await this.client.get('/verification/status');
+      return response.data.data;
+    },
+
+    uploadDocument: async (file: File): Promise<string> => {
+      const formData = new FormData();
+      formData.append('document', file);
+      const response = await this.client.post('/verification/upload-document', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data.url;
+    },
+  };
+
+  // Transactions API
+  transactions = {
+    getTransactions: async (filters?: {
+      startDate?: string;
+      endDate?: string;
+    }): Promise<{
+      transactions: any[];
+      totalAmount: number;
+    }> => {
+      const response = await this.client.get('/transactions', { params: filters });
+      return response.data.data;
+    },
+
+    getTransactionDetails: async (id: string): Promise<any> => {
+      const response = await this.client.get(`/transactions/${id}`);
+      return response.data.data;
+    },
+
+    createTransaction: async (data: any): Promise<any> => {
+      const response = await this.client.post('/transactions', data);
+      return response.data.data;
+    },
+
+    updateTransaction: async (id: string, data: any): Promise<any> => {
+      const response = await this.client.put(`/transactions/${id}`, data);
+      return response.data.data;
+    },
+
+    deleteTransaction: async (id: string): Promise<void> => {
+      await this.client.delete(`/transactions/${id}`);
+    },
+  };
+
+  // Analytics API
+  analytics = {
+    getDashboard: async (range?: '7d' | '30d' | '90d' | '365d'): Promise<{
+      stats: {
+        totalInstitutes: number;
+        pendingInstitutes: number;
+        approvedInstitutes: number;
+        rejectedInstitutes: number;
+        totalVehicles: number;
+        pendingVehicles: number;
+        approvedVehicles: number;
+        rejectedVehicles: number;
+        soldVehicles: number;
+        activeVehicles: number;
+        totalInquiries: number;
+        totalValue: number;
+        totalAdViews: number;
+        totalAdClicks: number;
+      };
+      instituteTrends: Array<{ date: string; count: number }>;
+      vehicleTrends: Array<{ date: string; count: number }>;
+      approvalRates: {
+        institutes: {
+          total: number;
+          approved: number;
+          rejected: number;
+          pending: number;
+          approvalRate: string;
+          avgApprovalTime: string;
+        };
+        vehicles: {
+          total: number;
+          approved: number;
+          rejected: number;
+          pending: number;
+          approvalRate: string;
+          avgApprovalTime: string;
+        };
+      };
+      vehicleTypeDistribution: Array<{ type: string; count: number }>;
+      geographicDistribution: Array<{ city: string; count: number }>;
+      topInstitutes: Array<{ id: string; name: string; count: number; city: string }>;
+      adMetrics: {
+        totalRevenue: number;
+        promotedVehicles: number;
+        totalImpressions: number;
+        totalClicks: number;
+        ctr: string;
+      };
+    }> => {
+      const response = await this.client.get('/analytics/dashboard', { params: { range } });
+      return response.data.data;
+    },
+
+    getRevenue: async (filters?: {
+      startDate?: string;
+      endDate?: string;
+    }): Promise<{
+      totalRevenue: number;
+      vehicles: Array<{
+        vehicleId: string;
+        brand: string;
+        model: string;
+        instituteName: string;
+        adBudget: number;
+        adPlacements: string[];
+      }>;
+    }> => {
+      const response = await this.client.get('/analytics/revenue', { params: filters });
+      return response.data.data;
+    },
+  };
 }
 
 // Export singleton instance
@@ -411,6 +903,7 @@ export const api = new ApiClient();
 export const institutesApi = api.institutes;
 export const vehiclesApi = api.vehicles;
 export const inquiriesApi = api.inquiries;
+export const adTrackingApi = api.adTracking;
 export const notificationsApi = api.notifications;
 
 export default api;

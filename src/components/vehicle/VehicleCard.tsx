@@ -2,8 +2,9 @@ import { Vehicle } from '@/types'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Fuel, Users, Gauge, Building2, Lock } from 'lucide-react'
+import { Fuel, Users, Gauge, Building2, Lock, Star } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { VerificationBadge } from '@/components/verification/VerificationBadge'
 
 interface VehicleCardProps {
   vehicle: Vehicle
@@ -30,8 +31,11 @@ export function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
   const featuredImage = getFeaturedImage();
   const hasImage = !!featuredImage;
 
+  // Check if vehicle is featured and active
+  const isFeatured = vehicle.isFeatured && (!vehicle.featuredUntil || new Date(vehicle.featuredUntil) > new Date())
+
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group" onClick={onClick}>
+    <Card className={`overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group ${isFeatured ? 'border-2 border-primary/50 shadow-md' : ''}`} onClick={onClick}>
       <div className="aspect-[4/3] bg-muted relative overflow-hidden flex items-center justify-center">
         {!isAuthenticated ? (
           /* Show placeholder for non-logged-in users */
@@ -53,7 +57,13 @@ export function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+          {isFeatured && (
+            <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0 shadow-lg">
+              <Star className="h-3 w-3 mr-1 fill-current" />
+              Featured
+            </Badge>
+          )}
           <Badge className="capitalize text-xs">{vehicle.condition}</Badge>
         </div>
       </div>
@@ -72,9 +82,17 @@ export function VehicleCard({ vehicle, onClick }: VehicleCardProps) {
 
         {/* Show institution name to all users (minimal info) */}
         {vehicle.instituteName && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Building2 className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">{vehicle.instituteName}</span>
+            <span className="truncate flex-1">{vehicle.instituteName}</span>
+            {vehicle.instituteVerified && (
+              <VerificationBadge
+                isVerified={vehicle.instituteVerified}
+                verificationExpiresAt={vehicle.instituteVerificationExpiresAt}
+                size="sm"
+                showTooltip={true}
+              />
+            )}
           </div>
         )}
 

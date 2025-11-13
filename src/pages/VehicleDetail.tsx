@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { Vehicle } from '@/types'
 import { ImageGallery } from '@/components/vehicle/ImageGallery'
+import { ShareButtons } from '@/components/vehicle/ShareButtons'
+import { RelatedVehicles } from '@/components/vehicle/RelatedVehicles'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,8 +13,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Bus, MapPin, Phone, Mail, Fuel, Gauge, Users, Calendar, AlertCircle, User } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { AdSection } from '@/components/ad/AdSection'
+import { InquiryPaymentDialog } from '@/components/payments/InquiryPaymentDialog'
+import { VerificationBadge } from '@/components/verification/VerificationBadge'
 
 interface Institute {
   _id: string
@@ -34,12 +39,10 @@ export function VehicleDetail() {
   const [contactPhone, setContactPhone] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [submittingInquiry, setSubmittingInquiry] = useState(false)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [hasAccessToContact, setHasAccessToContact] = useState(false)
 
-  useEffect(() => {
-    loadVehicleDetails()
-  }, [id])
-
-  const loadVehicleDetails = async () => {
+  const loadVehicleDetails = useCallback(async () => {
     try {
       if (!id) {
         toast.error('Vehicle not found')
@@ -90,14 +93,18 @@ export function VehicleDetail() {
     } finally {
       setLoading(false)
     }
+  }, [id, navigate])
+
+  useEffect(() => {
+    loadVehicleDetails()
+  }, [loadVehicleDetails])
+
+  const handlePaymentSuccess = () => {
+    setHasAccessToContact(true)
+    toast.success('Payment successful! You can now view seller details and send your inquiry.')
   }
 
   const handleSubmitInquiry = async () => {
-    if (!contactName.trim() || !contactPhone.trim() || !contactMessage.trim()) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
     if (!currentUser) {
       toast.error('Please sign in to send an inquiry')
       navigate('/auth')
@@ -106,6 +113,17 @@ export function VehicleDetail() {
 
     if (currentUser.role !== 'school') {
       toast.error('Only schools can send inquiries')
+      return
+    }
+
+    // Check if user has paid to view contact
+    if (!hasAccessToContact) {
+      setPaymentDialogOpen(true)
+      return
+    }
+
+    if (!contactName.trim() || !contactPhone.trim() || !contactMessage.trim()) {
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -244,6 +262,13 @@ export function VehicleDetail() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Promoted Ads Section */}
+        <AdSection 
+          pageLocation="detail" 
+          title="Other Featured Vehicles"
+          className="mb-8"
+        />
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Images and Details */}
           <div className="lg:col-span-2 space-y-8">
@@ -353,6 +378,13 @@ export function VehicleDetail() {
               </CardContent>
             </Card>
 
+            {/* Share Buttons */}
+            <Card>
+              <CardContent className="pt-6">
+                <ShareButtons vehicle={vehicle} />
+              </CardContent>
+            </Card>
+
             {/* Institute Info Card */}
             {institute && (
               <Card>
@@ -362,7 +394,17 @@ export function VehicleDetail() {
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-sm font-semibold text-muted-foreground mb-1">Institute Name</p>
-                    <p className="font-medium">{institute.instituteName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{institute.instituteName}</p>
+                      {vehicle?.instituteVerified && (
+                        <VerificationBadge
+                          isVerified={vehicle.instituteVerified}
+                          verificationExpiresAt={vehicle.instituteVerificationExpiresAt}
+                          size="sm"
+                          showTooltip={true}
+                        />
+                      )}
+                    </div>
                   </div>
                   {!isAuthenticated ? (
                     <Alert>
@@ -416,7 +458,11 @@ export function VehicleDetail() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Interested?</CardTitle>
-                <CardDescription>Send an inquiry to the seller</CardDescription>
+                <CardDescription>
+                  {hasAccessToContact 
+                    ? 'Send an inquiry to the seller'
+                    : 'Unlock seller contact to send inquiry'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!currentUser ? (
@@ -439,6 +485,22 @@ export function VehicleDetail() {
                       Only school accounts can send inquiries
                     </AlertDescription>
                   </Alert>
+                ) : !hasAccessToContact ? (
+                  <div className="space-y-4">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        To view seller contact details and send inquiries, please complete the payment.
+                      </AlertDescription>
+                    </Alert>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={() => setPaymentDialogOpen(true)}
+                    >
+                      Unlock Contact Details
+                    </Button>
+                  </div>
                 ) : (
                   <>
                     <div className="space-y-2">
@@ -486,7 +548,23 @@ export function VehicleDetail() {
             </Card>
           </div>
         </div>
+
+        {/* Related Vehicles Section */}
+        <div className="mt-12">
+          <RelatedVehicles currentVehicle={vehicle} />
+        </div>
       </div>
+
+      {/* Payment Dialog */}
+      {vehicle && (
+        <InquiryPaymentDialog
+          open={paymentDialogOpen}
+          onClose={() => setPaymentDialogOpen(false)}
+          vehicleId={vehicle._id || vehicle.id || ''}
+          vehicleTitle={`${vehicle.brand} ${vehicle.model} (${vehicle.year})`}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   )
 }

@@ -1,50 +1,19 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { notificationsApi, Notification as ApiNotification } from '../lib/api';
 import { useAuth } from '@/hooks/useAuth';
-
-export type NotificationType = 'institute_approved' | 'institute_rejected' | 'vehicle_approved' | 'vehicle_rejected' | 'inquiry_received' | 'inquiry_replied' | 'vehicle_sold';
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  link?: string;
-  read: boolean;
-  createdAt: Date;
-  metadata?: {
-    instituteId?: string;
-    instituteName?: string;
-    vehicleId?: string;
-    vehicleBrand?: string;
-    vehicleModel?: string;
-    inquiryId?: string;
-    reason?: string;
-  };
-}
-
-interface NotificationContextType {
-  notifications: Notification[];
-  unreadCount: number;
-  isLoading: boolean;
-  fetchNotifications: () => Promise<void>;
-  markAsRead: (id: string) => Promise<void>;
-  markAllAsRead: () => Promise<void>;
-  deleteNotification: (id: string) => Promise<void>;
-  clearReadNotifications: () => Promise<void>;
-}
-
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+import { NotificationContext, Notification as NotificationType, NotificationContextType } from './notification-base';
+import { blink } from '@/lib/blink';
+import type { RealtimeChannel } from '@blinkdotnew/sdk';
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   // Convert API notification to our Notification type
-  const convertNotification = (apiNotif: ApiNotification): Notification => ({
+  const convertNotification = (apiNotif: ApiNotification): NotificationType => ({
     id: apiNotif._id,
     userId: apiNotif.userId,
     type: apiNotif.type,
@@ -152,22 +121,77 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [fetchNotifications]);
 
-  // Fetch notifications when user logs in
+  // Set up realtime notifications and fallback polling
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(() => {
-        fetchNotifications();
-      }, 30000);
-      
-      return () => clearInterval(interval);
-    } else {
+    if (!user) {
       // Clear notifications when user logs out
       setNotifications([]);
       setUnreadCount(0);
+      return;
     }
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up realtime subscription for instant notifications
+    let channel: RealtimeChannel | null = null;
+    
+    const setupRealtime = async () => {
+      try {
+        channel = blink.realtime.channel(`notifications-${user.id}`);
+        
+        await channel.subscribe({
+          userId: user.id,
+          metadata: { userName: user.instituteName || user.email }
+        });
+
+        // Listen for new notifications
+        const unsubMessage = channel.onMessage((message) => {
+          if (message.type === 'notification_created') {
+            const newNotification: NotificationType = {
+              id: message.data.id,
+              userId: message.data.userId,
+              type: message.data.type,
+              title: message.data.title,
+              message: message.data.message,
+              link: message.data.link,
+              read: message.data.read,
+              createdAt: new Date(message.data.createdAt),
+              metadata: message.data.metadata,
+            };
+
+            // Add to notifications list (prepend to show newest first)
+            setNotifications(prev => [newNotification, ...prev]);
+            
+            // Increment unread count
+            if (!newNotification.read) {
+              setUnreadCount(prev => prev + 1);
+            }
+          }
+        });
+
+        channelRef.current = channel;
+      } catch (error) {
+        console.error('Failed to setup realtime notifications:', error);
+      }
+    };
+
+    setupRealtime();
+
+    // Fallback: Poll every 2 minutes as backup (reduced from 30s since we have realtime)
+    // This ensures we stay in sync even if realtime connection drops
+    const fallbackInterval = setInterval(() => {
+      fetchNotifications();
+    }, 120000); // 2 minutes
+
+    // Cleanup
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
+      clearInterval(fallbackInterval);
+    };
   }, [user, fetchNotifications]);
 
   return (
@@ -188,10 +212,4 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   );
 }
 
-export function useNotifications() {
-  const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error('useNotifications must be used within NotificationProvider');
-  }
-  return context;
-}
+

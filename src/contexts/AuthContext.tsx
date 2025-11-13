@@ -65,12 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userWithMetadata
   }
 
-  const signUp = async (email: string, password: string, role: 'admin' | 'school', displayName: string) => {
+  const signUp = async (email: string, password: string, role: 'admin' | 'school', displayName: string, subscriptionPlan?: 'Silver' | 'Gold' | 'Platinum') => {
     const { user: userData, token } = await api.auth.signup({
       email,
       password,
       displayName,
       role,
+      subscriptionPlan,
     })
     const userWithMetadata = {
       ...userData,

@@ -11,7 +11,7 @@ import { CheckCircle, XCircle, Clock } from 'lucide-react'
 import { blink } from '@/lib/blink'
 import { api } from '@/lib/api'
 import { Institute } from '@/types'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function InstitutesManagement() {
   const [institutes, setInstitutes] = useState<Institute[]>([])
@@ -27,9 +27,6 @@ export function InstitutesManagement() {
   const loadInstitutes = async () => {
     try {
       const data = await api.institutes.getAll()
-
-      console.log('Institutes loaded:')
-      console.log(data)
       setInstitutes(data as Institute[])
     } catch (error) {
       toast.error('Failed to load institutes')
@@ -38,12 +35,15 @@ export function InstitutesManagement() {
 
   const handleApprove = async (institute: Institute) => {
     setLoading(true)
+    const loadingToast = toast.loading(`Approving ${institute.instituteName}...`)
     try {
-      await api.institutes.approve(institute._id)
-      toast.success(`${institute.instituteName} has been approved!`)
-      loadInstitutes()
+      await api.institutes.approve(institute._id || institute.id!)
+      toast.dismiss(loadingToast)
+      toast.success(`✅ ${institute.instituteName} has been approved successfully!`)
+      await loadInstitutes()
     } catch (error) {
-      toast.error('Failed to approve institute')
+      toast.dismiss(loadingToast)
+      toast.error('❌ Failed to approve institute. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -51,20 +51,23 @@ export function InstitutesManagement() {
 
   const handleReject = async () => {
     if (!selectedInstitute || !rejectionReason.trim()) {
-      toast.error('Please provide a reason for rejection')
+      toast.error('⚠️ Please provide a reason for rejection')
       return
     }
 
     setLoading(true)
+    const loadingToast = toast.loading(`Rejecting ${selectedInstitute.instituteName}...`)
     try {
-      await api.institutes.reject(selectedInstitute.id, rejectionReason)
-      toast.success('Institute has been rejected')
+      await api.institutes.reject(selectedInstitute._id || selectedInstitute.id!, rejectionReason)
+      toast.dismiss(loadingToast)
+      toast.success(`✅ Institute rejected. Notification sent to ${selectedInstitute.instituteName}.`)
       setShowRejectDialog(false)
       setRejectionReason('')
       setSelectedInstitute(null)
-      loadInstitutes()
+      await loadInstitutes()
     } catch (error) {
-      toast.error('Failed to reject institute')
+      toast.dismiss(loadingToast)
+      toast.error('❌ Failed to reject institute. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -171,9 +174,10 @@ export function InstitutesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              pendingInstitutes.map(institute => (
-                <InstituteCard key={institute.id} institute={institute} />
-              ))
+              pendingInstitutes.map(institute => {
+                const instituteId = institute._id || institute.id
+                return <InstituteCard key={instituteId} institute={institute} />
+              })
             )}
           </TabsContent>
 
@@ -185,9 +189,10 @@ export function InstitutesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              approvedInstitutes.map(institute => (
-                <InstituteCard key={institute.id} institute={institute} />
-              ))
+              approvedInstitutes.map(institute => {
+                const instituteId = institute._id || institute.id
+                return <InstituteCard key={instituteId} institute={institute} />
+              })
             )}
           </TabsContent>
 
@@ -199,9 +204,10 @@ export function InstitutesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              rejectedInstitutes.map(institute => (
-                <InstituteCard key={institute.id} institute={institute} />
-              ))
+              rejectedInstitutes.map(institute => {
+                const instituteId = institute._id || institute.id
+                return <InstituteCard key={instituteId} institute={institute} />
+              })
             )}
           </TabsContent>
         </Tabs>

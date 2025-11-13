@@ -10,9 +10,30 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { Bus, Search, Filter, RefreshCw, User } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Bus, Search, Filter, RefreshCw, User, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { AdSection } from '@/components/ad/AdSection'
+
+interface FilterChipProps {
+  label: string
+  onClose: () => void
+}
+
+function FilterChip({ label, onClose }: FilterChipProps) {
+  return (
+    <div className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-lg py-1 px-3 text-sm">
+      <span>{label}</span>
+      <button
+        onClick={onClose}
+        className="hover:bg-primary/20 rounded p-0.5 transition-colors"
+        aria-label="Remove filter"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  )
+}
 
 export function BrowseVehicles() {
   const navigate = useNavigate()
@@ -28,51 +49,27 @@ export function BrowseVehicles() {
   const [conditionFilter, setConditionFilter] = useState('all')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000])
   const [yearRange, setYearRange] = useState<[number, number]>([1990, new Date().getFullYear()])
+  const [seatingRange, setSeatingRange] = useState<[number, number]>([5, 90])
   const [sortBy, setSortBy] = useState('newest')
 
-  // Load vehicles on mount
-  useEffect(() => {
-    loadVehicles()
-  }, [])
-
-  // Filter vehicles whenever filters change
-  useEffect(() => {
-    filterAndSortVehicles()
-  }, [searchQuery, vehicleTypeFilter, fuelTypeFilter, conditionFilter, priceRange, yearRange, sortBy])
-
-  const loadVehicles = async () => {
-    try {
-      setLoading(true)
-      const data = await api.vehicles.getAll({
-        status: 'approved',
-        soldStatus: 'available'
-      })
-      setVehicles(data as Vehicle[])
-    } catch (error: any) {
-      // Network error - silently fail and show empty state
-      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network')) {
-        console.log('Backend not available - showing empty vehicles list')
-        setVehicles([])
-      } else {
-        console.error('Failed to load vehicles:', error)
-        toast.error('Failed to load vehicles')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Define filterAndSortVehicles with useCallback (must be before useEffect that uses it)
   const filterAndSortVehicles = useCallback(() => {
-    let filtered = vehicles
+    if (!vehicles || vehicles.length === 0) {
+      setFilteredVehicles([])
+      return
+    }
 
-    // Search by brand, model, registration
+    let filtered = [...vehicles]
+
+    // Search by brand, model, registration, institute
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(v =>
         v.brand?.toLowerCase().includes(query) ||
         v.model.toLowerCase().includes(query) ||
         v.registrationNumber?.toLowerCase().includes(query) ||
-        v.instituteName?.toLowerCase().includes(query)
+        v.instituteName?.toLowerCase().includes(query) ||
+        v.description?.toLowerCase().includes(query)
       )
     }
 
@@ -101,21 +98,83 @@ export function BrowseVehicles() {
       v.year >= yearRange[0] && v.year <= yearRange[1]
     )
 
-    // Sort
+    // Filter by seating capacity range
+    filtered = filtered.filter(v =>
+      v.seatingCapacity >= seatingRange[0] && v.seatingCapacity <= seatingRange[1]
+    )
+
+    // Sort - with featured ads prioritization
     if (sortBy === 'newest') {
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      filtered.sort((a, b) => {
+        // Featured ads first
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
     } else if (sortBy === 'price-low') {
-      filtered.sort((a, b) => a.price - b.price)
+      filtered.sort((a, b) => {
+        // Featured ads first
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return a.price - b.price
+      })
     } else if (sortBy === 'price-high') {
-      filtered.sort((a, b) => b.price - a.price)
+      filtered.sort((a, b) => {
+        // Featured ads first
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return b.price - a.price
+      })
     } else if (sortBy === 'year-new') {
-      filtered.sort((a, b) => b.year - a.year)
+      filtered.sort((a, b) => {
+        // Featured ads first
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return b.year - a.year
+      })
     } else if (sortBy === 'year-old') {
-      filtered.sort((a, b) => a.year - b.year)
+      filtered.sort((a, b) => {
+        // Featured ads first
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return a.year - b.year
+      })
     }
 
     setFilteredVehicles(filtered)
-  }, [vehicles, searchQuery, vehicleTypeFilter, fuelTypeFilter, conditionFilter, priceRange, yearRange, sortBy])
+  }, [vehicles, searchQuery, vehicleTypeFilter, fuelTypeFilter, conditionFilter, priceRange, yearRange, seatingRange, sortBy])
+
+  // Load vehicles on mount
+  useEffect(() => {
+    loadVehicles()
+  }, [])
+
+  // Filter vehicles whenever filters or data changes
+  useEffect(() => {
+    filterAndSortVehicles()
+  }, [filterAndSortVehicles])
+
+  const loadVehicles = async () => {
+    try {
+      setLoading(true)
+      const data = await api.vehicles.getAll({
+        status: 'approved',
+        soldStatus: 'available'
+      })
+      setVehicles(data as Vehicle[])
+    } catch (error: any) {
+      // Network error - silently fail and show empty state
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network')) {
+        console.log('Backend not available - showing empty vehicles list')
+        setVehicles([])
+      } else {
+        console.error('Failed to load vehicles:', error)
+        toast.error('Failed to load vehicles')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const resetFilters = () => {
     setSearchQuery('')
@@ -124,8 +183,21 @@ export function BrowseVehicles() {
     setConditionFilter('all')
     setPriceRange([0, 5000000])
     setYearRange([1990, new Date().getFullYear()])
+    setSeatingRange([5, 90])
     setSortBy('newest')
     toast.success('Filters reset')
+  }
+
+  const getActiveFilterCount = () => {
+    let count = 0
+    if (searchQuery) count++
+    if (vehicleTypeFilter !== 'all') count++
+    if (fuelTypeFilter !== 'all') count++
+    if (conditionFilter !== 'all') count++
+    if (priceRange[0] !== 0 || priceRange[1] !== 5000000) count++
+    if (yearRange[0] !== 1990 || yearRange[1] !== new Date().getFullYear()) count++
+    if (seatingRange[0] !== 5 || seatingRange[1] !== 90) count++
+    return count
   }
 
   return (
@@ -168,6 +240,13 @@ export function BrowseVehicles() {
           <p className="text-muted-foreground">Find the perfect vehicle from verified educational institutes</p>
         </div>
 
+        {/* Promoted Ads Section */}
+        <AdSection 
+          pageLocation="browse" 
+          title="Featured Premium Vehicles"
+          className="mb-8"
+        />
+
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
@@ -182,6 +261,7 @@ export function BrowseVehicles() {
                     variant="ghost"
                     size="sm"
                     onClick={resetFilters}
+                    title="Reset all filters"
                   >
                     <RefreshCw className="h-3 w-3" />
                   </Button>
@@ -195,7 +275,7 @@ export function BrowseVehicles() {
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="search"
-                      placeholder="Brand, model, registration..."
+                      placeholder="Brand, model, description..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-8"
@@ -293,6 +373,25 @@ export function BrowseVehicles() {
                   </div>
                 </div>
 
+                {/* Seating Capacity */}
+                <div className="space-y-2">
+                  <Label>Seating Capacity</Label>
+                  <div className="pt-2">
+                    <Slider
+                      min={5}
+                      max={90}
+                      step={5}
+                      value={seatingRange}
+                      onValueChange={setSeatingRange}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                      <span>{seatingRange[0]} seats</span>
+                      <span>{seatingRange[1]} seats</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sort */}
                 <div className="space-y-2">
                   <Label htmlFor="sort">Sort By</Label>
@@ -313,20 +412,57 @@ export function BrowseVehicles() {
             </Card>
           </div>
 
-          {/* Vehicles Grid */}
-          <div className="lg:col-span-3">
+          {/* Main Content Area */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Active Filter Chips */}
+            {getActiveFilterCount() > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {searchQuery && (
+                  <FilterChip label={`Search: ${searchQuery}`} onClose={() => setSearchQuery('')} />
+                )}
+                {vehicleTypeFilter !== 'all' && (
+                  <FilterChip label={vehicleTypeFilter} onClose={() => setVehicleTypeFilter('all')} />
+                )}
+                {fuelTypeFilter !== 'all' && (
+                  <FilterChip label={fuelTypeFilter} onClose={() => setFuelTypeFilter('all')} />
+                )}
+                {conditionFilter !== 'all' && (
+                  <FilterChip label={conditionFilter} onClose={() => setConditionFilter('all')} />
+                )}
+                {(priceRange[0] !== 0 || priceRange[1] !== 5000000) && (
+                  <FilterChip 
+                    label={`₹${priceRange[0].toLocaleString()} - ₹${priceRange[1].toLocaleString()}`} 
+                    onClose={() => setPriceRange([0, 5000000])} 
+                  />
+                )}
+                {(yearRange[0] !== 1990 || yearRange[1] !== new Date().getFullYear()) && (
+                  <FilterChip 
+                    label={`${yearRange[0]} - ${yearRange[1]}`} 
+                    onClose={() => setYearRange([1990, new Date().getFullYear()])} 
+                  />
+                )}
+                {(seatingRange[0] !== 5 || seatingRange[1] !== 90) && (
+                  <FilterChip 
+                    label={`${seatingRange[0]} - ${seatingRange[1]} seats`} 
+                    onClose={() => setSeatingRange([5, 90])} 
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Vehicles Grid */}
             {loading ? (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className="bg-muted rounded-lg h-64 animate-pulse"></div>
                 ))}
               </div>
             ) : filteredVehicles.length > 0 ? (
               <>
-                <div className="mb-4 text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   Showing {filteredVehicles.length} of {vehicles.length} vehicles
                 </div>
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {filteredVehicles.map((vehicle) => {
                     const vehicleId = vehicle._id || vehicle.id
                     return (

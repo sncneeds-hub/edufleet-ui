@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { api } from '@/lib/api';
 import { useFormDraft, FORM_KEYS } from '@/hooks/useStateRestoration';
+import { blink } from '@/lib/blink';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +14,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, AlertCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { VEHICLE_FEATURES, stringifyFeatures } from '@/lib/vehicleFeatures';
-import { processImagesForUpload, formatFileSize } from '@/lib/imageValidation';
+import { formatFileSize } from '@/lib/imageValidation';
+import { processImagesForUploadAdvanced } from '@/lib/imageCompression';
+import { UpgradeCard } from '@/components/subscription/UpgradeCard';
 
 const vehicleSchema = z.object({
   vehicleType: z.string().min(1, 'Vehicle type is required'),
@@ -46,6 +49,13 @@ export default function PostVehicle() {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [processingImages, setProcessingImages] = useState(false);
   const [imageProgress, setImageProgress] = useState<{[key: number]: number}>({});
+  
+  // Subscription state
+  const [subscription, setSubscription] = useState<any>(null);
+  const [limitReached, setLimitReached] = useState(false);
+  const [nearLimit, setNearLimit] = useState(false);
+  const [usagePercent, setUsagePercent] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const {
     register,
@@ -56,6 +66,50 @@ export default function PostVehicle() {
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
   });
+
+  // Check subscription and vehicle limit on mount
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const user = await api.auth.me();
+        const institute = await api.institutes.getByUserId(user._id || user.id);
+
+        if (institute) {
+          // Fetch subscription
+          const response = await fetch(`/api/subscriptions/status`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+          });
+          
+          if (response.ok) {
+            const subData = await response.json();
+            setSubscription(subData.data);
+
+            // Get vehicle count
+            const vehiclesData = await api.vehicles.getAll({ instituteId: institute._id || institute.id });
+            const approvedCount = vehiclesData.filter(v => v.status === 'approved' && v.soldStatus !== 'sold').length;
+
+            // Check limit
+            if (subData.data?.limits?.maxVehicles && subData.data.limits.maxVehicles !== -1) {
+              const percent = (approvedCount / subData.data.limits.maxVehicles) * 100;
+              setUsagePercent(percent);
+              
+              if (approvedCount >= subData.data.limits.maxVehicles) {
+                setLimitReached(true);
+              } else if (percent >= 80) {
+                setNearLimit(true);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check subscription:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSubscription();
+  }, []);
 
   // Check for saved draft on mount
   useEffect(() => {
@@ -101,17 +155,28 @@ export default function PostVehicle() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    
+    // Check total count
     if (files.length + images.length > 10) {
-      toast.error('Maximum 10 images allowed');
+      toast.error(`Maximum 10 images allowed. You already have ${images.length} image(s).`);
       return;
     }
 
     setProcessingImages(true);
     try {
-      // Process images with validation and compression
-      const processedFiles = await processImagesForUpload(files, (fileIndex, progress) => {
-        setImageProgress(prev => ({ ...prev, [fileIndex]: progress }));
+      // Process images with advanced compression
+      const processedFiles = await processImagesForUploadAdvanced(files, {
+        preset: 'gallery', // Use gallery preset for vehicle listings
+        maxImages: 10 - images.length,
+        showToasts: true,
+        onProgress: (fileIndex, progress) => {
+          setImageProgress(prev => ({ ...prev, [fileIndex]: progress }));
+        },
       });
+
+      if (processedFiles.length === 0) {
+        return;
+      }
 
       setImages(prev => [...prev, ...processedFiles]);
       
@@ -127,6 +192,7 @@ export default function PostVehicle() {
       setImageProgress({});
     } catch (error) {
       console.error('Image processing failed:', error);
+      toast.error('Failed to process images. Please try again.');
     } finally {
       setProcessingImages(false);
     }
@@ -199,18 +265,54 @@ export default function PostVehicle() {
       toast.success('Vehicle posted successfully! Awaiting admin approval.');
       clearDraft(); // Clear saved draft after successful submission
       navigate('/school/my-vehicles');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error posting vehicle:', error);
-      toast.error('Failed to post vehicle. Please try again.');
+      
+      // Handle limit reached error
+      if (error.response?.data?.code === 'LIMIT_REACHED') {
+        toast.error(error.response.data.error);
+        setLimitReached(true);
+      } else {
+        toast.error('Failed to post vehicle. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
       setUploadingImages(false);
     }
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 max-w-4xl">
+        {/* Upgrade Card if Limit Reached */}
+        {limitReached && subscription && (
+          <div className="mb-6">
+            <UpgradeCard
+              title="Plan Limit Reached"
+              description="You've reached your current plan's vehicle listing limit. Upgrade to post more vehicles."
+              currentPlan={subscription.subscriptionPlan || 'Silver'}
+              upgradeTo="Gold"
+              onUpgrade={() => navigate('/pricing')}
+              features={[
+                `${subscription.subscriptionPlan === 'Silver' ? 'Post up to 30 listings (vs 10)' : 'Post up to ∞ listings (vs 30)'}`,
+                `${subscription.subscriptionPlan === 'Silver' ? '60 day duration (vs 7 days)' : '90 day duration (vs 60 days)'}`,
+                'Featured badges and homepage promotion',
+                'Priority customer support',
+              ]}
+            />
+          </div>
+        )}
+
         {/* Restore Draft Prompt */}
         {showRestorePrompt && (
           <Card className="mb-6 border-amber-500 bg-amber-50">

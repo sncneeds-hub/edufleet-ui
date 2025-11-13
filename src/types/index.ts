@@ -25,8 +25,35 @@ export interface Institute {
   instituteEmail: string
   approvalStatus: 'pending' | 'approved' | 'rejected'
   rejectionReason?: string
+  isPriorityUser?: boolean
+  priorityExpiresAt?: string
+  priorityStartedAt?: string
+  subscriptionPlan?: 'Silver' | 'Gold' | 'Platinum'
+  subscriptionStatus?: 'active' | 'inactive' | 'expired' | 'cancelled'
+  subscriptionStartDate?: string
+  subscriptionEndDate?: string
+  isVerified?: boolean
+  verificationDate?: string
+  verificationExpiresAt?: string
+  verificationDocuments?: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface VerificationStatus {
+  isVerified: boolean
+  verificationDate?: string
+  expiresAt?: string
+  needsRenewal?: boolean
+}
+
+export interface VerificationOrder {
+  orderId: string
+  amount: number
+  currency: string
+  keyId: string
+  verificationType: 'oneTime' | 'renewal'
+  description: string
 }
 
 export interface Vehicle {
@@ -34,6 +61,8 @@ export interface Vehicle {
   id?: string // Legacy support for backward compatibility
   instituteId: string
   instituteName: string
+  instituteVerified?: boolean
+  instituteVerificationExpiresAt?: string
   vehicleType: 'bus' | 'van' | 'minibus' | 'car' | 'other'
   brand: string
   model: string
@@ -51,6 +80,16 @@ export interface Vehicle {
   approvalStatus: 'pending' | 'approved' | 'rejected'
   rejectionReason?: string
   soldStatus: 'available' | 'sold'
+  isPromotedAd?: boolean
+  isFeatured?: boolean
+  featuredUntil?: string
+  adPlacements?: ('landing' | 'browse' | 'detail')[]
+  adPrice?: number
+  totalViews?: number
+  totalClicks?: number
+  adBudget?: number
+  adSpent?: number
+  isPlaceholder?: boolean
   createdAt: string
   updatedAt: string
 }

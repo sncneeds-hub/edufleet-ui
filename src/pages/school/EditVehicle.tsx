@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Upload, X, ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { VEHICLE_FEATURES, stringifyFeatures, getFeaturesArray } from '@/lib/vehicleFeatures';
-import { processImagesForUpload, formatFileSize } from '@/lib/imageValidation';
+import { processImagesForUploadAdvanced, formatFileSize } from '@/lib/imageCompression';
 
 const vehicleSchema = z.object({
   vehicleType: z.string().min(1, 'Vehicle type is required'),
@@ -75,10 +75,12 @@ export default function EditVehicle() {
   const condition = watch('condition');
 
   useEffect(() => {
-    loadVehicleDetails();
-  }, [id]);
+    if (id) {
+      loadVehicleDetails();
+    }
+  }, [loadVehicleDetails, id]);
 
-  const loadVehicleDetails = async () => {
+  const loadVehicleDetails = useCallback(async () => {
     try {
       if (!id) {
         toast.error('Vehicle ID not found');
@@ -109,7 +111,7 @@ export default function EditVehicle() {
       // Pre-fill form
       setValue('vehicleType', vehicleData.vehicleType);
       setValue('brand', vehicleData.brand);
-      setValue('model', vehicleData.model);
+      setValue('model', vehicleData.vehicleModel);
       setValue('year', vehicleData.year);
       setValue('registrationNumber', vehicleData.registrationNumber);
       setValue('seatingCapacity', vehicleData.seatingCapacity);
@@ -125,7 +127,7 @@ export default function EditVehicle() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate, setValue]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -139,9 +141,18 @@ export default function EditVehicle() {
     setProcessingImages(true);
     try {
       // Process images with validation and compression
-      const processedFiles = await processImagesForUpload(files, (fileIndex, progress) => {
-        setImageProgress(prev => ({ ...prev, [fileIndex]: progress }));
+      const processedFiles = await processImagesForUploadAdvanced(files, {
+        preset: 'gallery',
+        maxImages: 10 - (existingImages.length - imagesToDelete.size + images.length),
+        showToasts: true,
+        onProgress: (fileIndex, progress) => {
+          setImageProgress(prev => ({ ...prev, [fileIndex]: progress }));
+        },
       });
+
+      if (processedFiles.length === 0) {
+        return;
+      }
 
       setImages(prev => [...prev, ...processedFiles]);
       
@@ -157,6 +168,7 @@ export default function EditVehicle() {
       setImageProgress({});
     } catch (error) {
       console.error('Image processing failed:', error);
+      toast.error('Failed to process images. Please try again.');
     } finally {
       setProcessingImages(false);
     }
@@ -214,7 +226,7 @@ export default function EditVehicle() {
       await api.vehicles.update(vehicle!.id, {
         vehicleType: data.vehicleType,
         brand: data.brand,
-        model: data.model,
+        vehicleModel: data.model,
         year: data.year,
         registrationNumber: data.registrationNumber,
         seatingCapacity: data.seatingCapacity,

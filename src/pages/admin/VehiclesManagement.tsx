@@ -13,7 +13,7 @@ import { CheckCircle, XCircle, Clock, Search, Image as ImageIcon, Download, Filt
 import { blink } from '@/lib/blink'
 import { api } from '@/lib/api'
 import { Vehicle } from '@/types'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function VehiclesManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -89,7 +89,7 @@ export function VehiclesManagement() {
   const handleApprove = async (vehicle: Vehicle) => {
     setLoading(true)
     try {
-      await api.vehicles.approve(vehicle.id)
+      await api.vehicles.approve(vehicle._id || vehicle.id!)
       toast.success(`${vehicle.brand} ${vehicle.model} has been approved!`)
       loadVehicles()
     } catch (error) {
@@ -108,7 +108,7 @@ export function VehiclesManagement() {
 
     setLoading(true)
     try {
-      await api.vehicles.reject(selectedVehicle.id, rejectionReason)
+      await api.vehicles.reject(selectedVehicle._id || selectedVehicle.id!, rejectionReason)
       toast.success('Vehicle has been rejected')
       setShowRejectDialog(false)
       setRejectionReason('')
@@ -247,23 +247,30 @@ export function VehiclesManagement() {
             </div>
           )}
 
-          {vehicle.features && vehicle.features.length > 0 && (
-            <div className="text-sm">
-              <p className="text-muted-foreground mb-2">Features</p>
-              <div className="flex flex-wrap gap-2">
-                {vehicle.features.slice(0, 5).map((feature, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {feature}
-                  </Badge>
-                ))}
-                {vehicle.features.length > 5 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{vehicle.features.length - 5} more
-                  </Badge>
-                )}
+          {(() => {
+            const features = Array.isArray(vehicle.features) 
+              ? vehicle.features 
+              : typeof vehicle.features === 'string'
+              ? (() => { try { return JSON.parse(vehicle.features); } catch { return []; } })()
+              : [];
+            return features && features.length > 0 && (
+              <div className="text-sm">
+                <p className="text-muted-foreground mb-2">Features</p>
+                <div className="flex flex-wrap gap-2">
+                  {features.slice(0, 5).map((feature, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {feature}
+                    </Badge>
+                  ))}
+                  {features.length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{features.length - 5} more
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {vehicle.rejectionReason && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm">
@@ -432,9 +439,10 @@ export function VehiclesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              filteredVehicles.map(vehicle => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} />
-              ))
+              filteredVehicles.map(vehicle => {
+                const vehicleId = vehicle._id || vehicle.id
+                return <VehicleCard key={vehicleId} vehicle={vehicle} />
+              })
             )}
           </TabsContent>
 
@@ -446,9 +454,10 @@ export function VehiclesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              filteredVehicles.map(vehicle => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} />
-              ))
+              filteredVehicles.map(vehicle => {
+                const vehicleId = vehicle._id || vehicle.id
+                return <VehicleCard key={vehicleId} vehicle={vehicle} />
+              })
             )}
           </TabsContent>
 
@@ -460,9 +469,10 @@ export function VehiclesManagement() {
                 </CardContent>
               </Card>
             ) : (
-              filteredVehicles.map(vehicle => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} />
-              ))
+              filteredVehicles.map(vehicle => {
+                const vehicleId = vehicle._id || vehicle.id
+                return <VehicleCard key={vehicleId} vehicle={vehicle} />
+              })
             )}
           </TabsContent>
         </Tabs>
