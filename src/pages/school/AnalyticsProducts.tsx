@@ -4,11 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { TrendingUp, BarChart3, Globe, CheckCircle, Star, Zap } from 'lucide-react';
+import { TrendingUp, BarChart3, Globe, CheckCircle, Star, Zap, Mail } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { RazorpayAnalyticsCheckout } from '@/components/payments/RazorpayAnalyticsCheckout';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function AnalyticsProducts() {
   const navigate = useNavigate();
@@ -359,28 +359,41 @@ export default function AnalyticsProducts() {
           </CardContent>
         </Card>
 
-        {/* Razorpay Checkout Dialog */}
-        <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Subscribe to Premium Analytics</DialogTitle>
-              <DialogDescription>
-                Complete your payment to activate your analytics subscription
-              </DialogDescription>
-            </DialogHeader>
+        {/* Contact Admin Dialog (Payments Disabled) */}
+        <AlertDialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                Contact Administrator for Analytics Subscription
+              </AlertDialogTitle>
+              <AlertDialogDescription className="pt-4">
+                Online payments are temporarily disabled. To subscribe to any analytics product, please contact the administrator with the product details below.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
             {selectedProduct && (
-              <RazorpayAnalyticsCheckout
-                productId={selectedProduct.id}
-                productName={selectedProduct.name}
-                price={selectedProduct.price}
-                currency={selectedProduct.currency}
-                period={selectedProduct.period}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
+              <div className="p-4 bg-secondary/50 rounded-md mt-4">
+                <p className="font-semibold">Selected Product:</p>
+                <p>{selectedProduct.name} — {selectedProduct.currency}{selectedProduct.price} / {selectedProduct.period}</p>
+                <p className="text-sm text-muted-foreground mt-2">Please contact admin@edufleet.com with this product code: <strong>{selectedProduct.id}</strong></p>
+              </div>
             )}
-          </DialogContent>
-        </Dialog>
+
+            <AlertDialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Close</Button>
+              <Button onClick={() => {
+                // copy contact info to clipboard and close
+                const info = `Product: ${selectedProduct?.name} (Code: ${selectedProduct?.id})`;
+                navigator.clipboard?.writeText(info);
+                toast.success('Product details copied to clipboard. Contact admin@edufleet.com');
+                setCheckoutOpen(false);
+              }}>
+                Copy & Contact Admin
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

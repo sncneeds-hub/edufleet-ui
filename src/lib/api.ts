@@ -638,17 +638,14 @@ class ApiClient {
     },
   };
 
-  // Payments API (Razorpay)
+  // Payments API (Manual Activation - No Online Payment)
   payments = {
+    // Payment order creation disabled (returns 501)
     createOrder: async (
       plan: 'Silver' | 'Gold' | 'Platinum',
       duration: 'monthly' | 'quarterly' | 'yearly'
-    ): Promise<{
-      orderId: string;
-      amount: number;
-      currency: string;
-      keyId: string;
-    }> => {
+    ): Promise<never> => {
+      // This will throw with 501 error
       const response = await this.client.post('/payments/create-order', {
         plan,
         duration,
@@ -656,31 +653,35 @@ class ApiClient {
       return response.data.data;
     },
 
+    // Payment verification disabled (returns 501)
     verifyPayment: async (
-      razorpay_order_id: string,
-      razorpay_payment_id: string,
-      razorpay_signature: string,
+      orderId: string,
+      paymentId: string,
+      signature: string,
       plan: 'Silver' | 'Gold' | 'Platinum',
       duration: 'monthly' | 'quarterly' | 'yearly'
-    ): Promise<Institute> => {
-      const response = await this.client.post('/payments/verify-payment', {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
+    ): Promise<never> => {
+      // This will throw with 501 error
+      const response = await this.client.post('/payments/verify', {
+        orderId,
+        paymentId,
+        signature,
         plan,
         duration,
       });
       return response.data.data;
     },
 
-    getHistory: async (): Promise<any[]> => {
+    // Get subscription history
+    getHistory: async (): Promise<any> => {
       const response = await this.client.get('/payments/history');
       return response.data.data;
     },
 
+    // Get pricing information
     getPricing: async (): Promise<any> => {
       const response = await this.client.get('/payments/pricing');
-      return response.data.data;
+      return response.data;
     },
   };
 
@@ -746,8 +747,9 @@ class ApiClient {
     },
   };
 
-  // Verification API
+  // Verification API (Manual process - no payment)
   verification = {
+    // Verification order creation disabled
     createOrder: async (
       verificationType: 'oneTime' | 'renewal' = 'oneTime'
     ): Promise<VerificationOrder> => {
@@ -757,16 +759,17 @@ class ApiClient {
       return response.data.data;
     },
 
+    // Verification payment disabled
     verifyPayment: async (
-      razorpay_order_id: string,
-      razorpay_payment_id: string,
-      razorpay_signature: string,
+      orderId: string,
+      paymentId: string,
+      signature: string,
       verificationType: 'oneTime' | 'renewal' = 'oneTime'
     ): Promise<Institute> => {
       const response = await this.client.post('/verification/verify-payment', {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
+        orderId,
+        paymentId,
+        signature,
         verificationType,
       });
       return response.data.data;

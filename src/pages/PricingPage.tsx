@@ -2,11 +2,18 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, ArrowRight } from 'lucide-react';
+import { Check, X, ArrowRight, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { RazorpayCheckout } from '@/components/payments/RazorpayCheckout';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const pricingPlans = [
   {
@@ -92,24 +99,21 @@ const comparisonFeatures = [
 export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [showPayment, setShowPayment] = useState(false);
+  const [showContactDialog, setShowContactDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'Silver' | 'Gold' | 'Platinum'>('Silver');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleSelectPlan = (planName: 'Silver' | 'Gold' | 'Platinum') => {
     if (user && user.role === 'school') {
       setSelectedPlan(planName);
-      setShowPayment(true);
+      setShowContactDialog(true);
     } else if (user && user.role === 'admin') {
       toast.info('Admins cannot purchase subscriptions. Please use school account.');
     } else {
-      navigate('/auth', { state: { selectedPlan: planName } });
+      // For non-logged in users, show contact dialog with prompt to register
+      setSelectedPlan(planName);
+      setShowContactDialog(true);
     }
-  };
-
-  const handlePaymentSuccess = () => {
-    toast.success('Subscription activated successfully!');
-    navigate('/school/dashboard');
   };
 
   const getDisplayPrice = (plan: typeof pricingPlans[0]) => {
@@ -340,10 +344,10 @@ export default function PricingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">What payment methods do you accept?</CardTitle>
+                <CardTitle className="text-lg">How do I activate my subscription?</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                We accept all major credit cards, debit cards, UPI, and net banking through Razorpay for secure payments.
+                Contact our administrator to activate your subscription manually. We'll guide you through the simple process.
               </CardContent>
             </Card>
 
@@ -396,16 +400,70 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Razorpay Payment Modal */}
-      {showPayment && (
-        <RazorpayCheckout
-          open={showPayment}
-          onClose={() => setShowPayment(false)}
-          plan={selectedPlan}
-          billingCycle={billingCycle}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
+      {/* Contact Admin Dialog */}
+      <AlertDialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Contact Administrator for Subscription
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 pt-4">
+              <p className="text-base">
+                You've selected the <span className="font-semibold text-foreground">{selectedPlan} Plan</span> with{' '}
+                <span className="font-semibold text-foreground">{billingCycle} billing</span>.
+              </p>
+              
+              <div className="bg-secondary/50 p-4 rounded-lg space-y-2">
+                <p className="font-semibold text-foreground">To activate this subscription:</p>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  {!user && <li>Create an account and get approved by admin</li>}
+                  <li>Contact the administrator via:</li>
+                  <ul className="list-disc list-inside ml-6 space-y-1">
+                    <li>Email: admin@edufleet.com</li>
+                    <li>Phone: +91 98765 43210</li>
+                  </ul>
+                  <li>Admin will activate your subscription manually</li>
+                </ol>
+              </div>
+
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
+                <p className="text-sm text-foreground">
+                  <strong>Note:</strong> Online payment is temporarily unavailable. 
+                  All subscriptions are currently activated manually by the administrator.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowContactDialog(false)}
+            >
+              Close
+            </Button>
+            {!user ? (
+              <Button
+                onClick={() => {
+                  setShowContactDialog(false);
+                  navigate('/auth', { state: { selectedPlan } });
+                }}
+              >
+                Create Account
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setShowContactDialog(false);
+                  navigate('/school/dashboard');
+                }}
+              >
+                Go to Dashboard
+              </Button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Footer */}
       <footer className="border-t py-12 mt-20">
