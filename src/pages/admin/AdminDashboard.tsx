@@ -1,474 +1,429 @@
 import { useEffect, useState } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { CheckCircle, XCircle, Clock, CreditCard, Calendar, TrendingUp } from 'lucide-react'
+import { 
+  Building2, Car, CheckCircle, Clock, TrendingUp, AlertCircle, 
+  IndianRupee, Users, BarChart3, PieChart, MapPin, Award 
+} from 'lucide-react'
 import { api } from '@/lib/api'
-import { Institute } from '@/types'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
+import {
+  LineChart, Line, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-export function SubscriptionManagement() {
-  const [subscriptions, setSubscriptions] = useState<Institute[]>([])
-  const [selectedInstitute, setSelectedInstitute] = useState<Institute | null>(null)
-  const [showActivateDialog, setShowActivateDialog] = useState(false)
-  const [showExtendDialog, setShowExtendDialog] = useState(false)
-  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<'Silver' | 'Gold' | 'Platinum'>('Silver')
-  const [durationMonths, setDurationMonths] = useState(1)
-  const [loading, setLoading] = useState(false)
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
+
+export function AdminDashboard() {
+  const navigate = useNavigate()
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '365d'>('30d')
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadSubscriptions()
-  }, [])
+    loadAnalytics()
+  }, [dateRange])
 
-  const loadSubscriptions = async () => {
-    try {
-      const data = await api.subscriptions.getAll()
-      setSubscriptions(data)
-    } catch (error) {
-      toast.error('Failed to load subscriptions')
-    }
-  }
-
-  const handleActivate = async () => {
-    if (!selectedInstitute) return
-
+  const loadAnalytics = async () => {
     setLoading(true)
     try {
-      await api.subscriptions.activate(selectedInstitute._id || selectedInstitute.id!, selectedPlan, durationMonths)
-      toast.success(`${selectedPlan} subscription activated for ${durationMonths} month(s)`)
-      setShowActivateDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
+      const data = await api.analytics.getDashboard(dateRange)
+      setAnalytics(data)
     } catch (error) {
-      toast.error('Failed to activate subscription')
+      console.error('Failed to load analytics:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCancel = async (institute: Institute) => {
-    setLoading(true)
-    try {
-      await api.subscriptions.cancel(institute._id || institute.id!)
-      toast.success('Subscription cancelled')
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to cancel subscription')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleExtend = async () => {
-    if (!selectedInstitute) return
-
-    setLoading(true)
-    try {
-      await api.subscriptions.extend(selectedInstitute._id || selectedInstitute.id!, durationMonths)
-      toast.success(`Subscription extended by ${durationMonths} month(s)`)
-      setShowExtendDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to extend subscription')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleChangePlan = async () => {
-    if (!selectedInstitute) return
-
-    setLoading(true)
-    try {
-      await api.subscriptions.changePlan(selectedInstitute._id || selectedInstitute.id!, selectedPlan)
-      toast.success(`Plan changed to ${selectedPlan}`)
-      setShowChangePlanDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to change plan')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const activeSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'active')
-  const inactiveSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'inactive')
-  const expiredSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'expired')
-  const cancelledSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'cancelled')
-
-  const getPlanColor = (plan?: string) => {
-    switch (plan) {
-      case 'Platinum': return 'from-purple-400 to-purple-600'
-      case 'Gold': return 'from-yellow-400 to-yellow-600'
-      case 'Silver': return 'from-slate-400 to-slate-600'
-      default: return 'from-gray-400 to-gray-600'
-    }
-  }
-
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'active': return <Badge className="bg-green-500">Active</Badge>
-      case 'expired': return <Badge variant="destructive">Expired</Badge>
-      case 'cancelled': return <Badge variant="secondary">Cancelled</Badge>
-      default: return <Badge variant="outline">Inactive</Badge>
-    }
-  }
-
-  const SubscriptionCard = ({ institute }: { institute: Institute }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{institute.instituteName}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Reg. No: {institute.registrationNumber}</p>
-          </div>
-          <div className="flex gap-2 items-center">
-            {getStatusBadge(institute.subscriptionStatus)}
-            {institute.subscriptionPlan && (
-              <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getPlanColor(institute.subscriptionPlan)} flex items-center justify-center`}>
-                <span className="text-white font-bold">{institute.subscriptionPlan[0]}</span>
-              </div>
-            )}
+  if (loading) {
+    return (
+      <DashboardLayout activeTab="dashboard">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading analytics dashboard...</p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Plan
-            </p>
-            <p className="font-medium">{institute.subscriptionPlan || 'No Plan'}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Status
-            </p>
-            <p className="font-medium capitalize">{institute.subscriptionStatus || 'inactive'}</p>
-          </div>
-        </div>
+      </DashboardLayout>
+    )
+  }
 
-        {institute.subscriptionStartDate && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Start Date
-              </p>
-              <p className="font-medium">{format(new Date(institute.subscriptionStartDate), 'MMM dd, yyyy')}</p>
-            </div>
-            {institute.subscriptionEndDate && (
-              <div>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  End Date
-                </p>
-                <p className="font-medium">{format(new Date(institute.subscriptionEndDate), 'MMM dd, yyyy')}</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-2 pt-2 flex-wrap">
-          {institute.subscriptionStatus === 'active' ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setSelectedPlan(institute.subscriptionPlan || 'Silver')
-                  setShowChangePlanDialog(true)
-                }}
-                disabled={loading}
-              >
-                Change Plan
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setDurationMonths(1)
-                  setShowExtendDialog(true)
-                }}
-                disabled={loading}
-              >
-                Extend
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => handleCancel(institute)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setSelectedPlan(institute.subscriptionPlan || 'Silver')
-                  setDurationMonths(1)
-                  setShowActivateDialog(true)
-                }}
-                disabled={loading}
-              >
-                Manual Activate
-              </Button>
-              <Badge variant="secondary" className="ml-2">
-                Admin can manually enable subscription
-              </Badge>
-            </>
-          )}
+  if (!analytics) {
+    return (
+      <DashboardLayout activeTab="dashboard">
+        <div className="text-center py-12">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Failed to load analytics data</p>
+          <Button variant="outline" className="mt-4" onClick={loadAnalytics}>
+            Try Again
+          </Button>
         </div>
-      </CardContent>
-    </Card>
-  )
+      </DashboardLayout>
+    )
+  }
+
+  const { stats, instituteTrends, vehicleTrends, approvalRates, vehicleTypeDistribution, geographicDistribution, topInstitutes, adMetrics } = analytics
 
   return (
-    <DashboardLayout activeTab="subscriptions">
+    <DashboardLayout activeTab="dashboard">
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold mb-2">Subscription Management</h2>
-          <p className="text-muted-foreground">Manage institute subscriptions and plans</p>
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Analytics Dashboard</h2>
+            <p className="text-muted-foreground">Comprehensive platform insights and metrics</p>
+          </div>
+          <div className="flex gap-3">
+            <Select value={dateRange} onValueChange={(value: any) => setDateRange(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="365d">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={loadAnalytics}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-500">{activeSubscriptions.length}</div>
+        {/* Alert Banner */}
+        {(stats.pendingInstitutes > 0 || stats.pendingVehicles > 0) && (
+          <Card className="border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold mb-1">Action Required</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.pendingInstitutes > 0 && `${stats.pendingInstitutes} institute${stats.pendingInstitutes > 1 ? 's' : ''} awaiting approval. `}
+                    {stats.pendingVehicles > 0 && `${stats.pendingVehicles} vehicle${stats.pendingVehicles > 1 ? 's' : ''} awaiting review.`}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Key Metrics Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Inactive</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Institutes</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-500">{inactiveSubscriptions.length}</div>
+              <div className="text-2xl font-bold">{stats.totalInstitutes}</div>
+              <div className="flex gap-2 mt-2">
+                <Badge variant="secondary" className="text-xs">{stats.approvedInstitutes} approved</Badge>
+                {stats.pendingInstitutes > 0 && (
+                  <Badge variant="outline" className="text-xs text-yellow-600">{stats.pendingInstitutes} pending</Badge>
+                )}
+              </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Expired</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
+              <Car className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-orange-500">{expiredSubscriptions.length}</div>
+              <div className="text-2xl font-bold">{stats.totalVehicles}</div>
+              <div className="flex gap-2 mt-2">
+                <Badge variant="secondary" className="text-xs">{stats.activeVehicles} active</Badge>
+                <Badge variant="outline" className="text-xs">{stats.soldVehicles} sold</Badge>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Cancelled</CardTitle>
+
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Listed Value</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-500">{cancelledSubscriptions.length}</div>
+              <div className="text-2xl font-bold">₹{(stats.totalValue / 100000).toFixed(2)}L</div>
+              <p className="text-xs text-muted-foreground mt-1">Across {stats.totalVehicles} vehicles</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Ad Revenue</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{(adMetrics.totalRevenue / 100000).toFixed(2)}L</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {adMetrics.promotedVehicles} promoted • {adMetrics.ctr}% CTR
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="active" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="active">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Active ({activeSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="inactive">
-              <Clock className="h-4 w-4 mr-2" />
-              Inactive ({inactiveSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="expired">
-              <XCircle className="h-4 w-4 mr-2" />
-              Expired ({expiredSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="cancelled">
-              <XCircle className="h-4 w-4 mr-2" />
-              Cancelled ({cancelledSubscriptions.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Registration & Posting Trends */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Institute Registration Trends</CardTitle>
+              <CardDescription>New institute registrations over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={instituteTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="count" name="Registrations" stroke="#8884d8" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="active" className="space-y-4">
-            {activeSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No active subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              activeSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>Vehicle Posting Trends</CardTitle>
+              <CardDescription>New vehicle listings over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={vehicleTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="count" name="New Listings" stroke="#82ca9d" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
 
-          <TabsContent value="inactive" className="space-y-4">
-            {inactiveSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No inactive subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              inactiveSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
+        {/* Approval Rates & Stats */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Institute Approval Metrics</CardTitle>
+              <CardDescription>Registration approval statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Approval Rate</span>
+                  <Badge variant="secondary" className="text-base">{approvalRates.institutes.approvalRate}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Avg. Approval Time</span>
+                  <span className="text-sm text-muted-foreground">{approvalRates.institutes.avgApprovalTime} hours</span>
+                </div>
+                <div className="pt-4">
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={[
+                      { status: 'Approved', count: approvalRates.institutes.approved },
+                      { status: 'Pending', count: approvalRates.institutes.pending },
+                      { status: 'Rejected', count: approvalRates.institutes.rejected },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="status" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="expired" className="space-y-4">
-            {expiredSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No expired subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              expiredSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>Vehicle Approval Metrics</CardTitle>
+              <CardDescription>Listing approval statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Approval Rate</span>
+                  <Badge variant="secondary" className="text-base">{approvalRates.vehicles.approvalRate}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Avg. Approval Time</span>
+                  <span className="text-sm text-muted-foreground">{approvalRates.vehicles.avgApprovalTime} hours</span>
+                </div>
+                <div className="pt-4">
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={[
+                      { status: 'Approved', count: approvalRates.vehicles.approved },
+                      { status: 'Pending', count: approvalRates.vehicles.pending },
+                      { status: 'Rejected', count: approvalRates.vehicles.rejected },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="status" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <TabsContent value="cancelled" className="space-y-4">
-            {cancelledSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No cancelled subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              cancelledSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Vehicle Type Distribution & Geographic Distribution */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Vehicle Type Distribution
+              </CardTitle>
+              <CardDescription>Breakdown by vehicle category</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={vehicleTypeDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ type, percent }) => `${type} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {vehicleTypeDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Geographic Distribution
+              </CardTitle>
+              <CardDescription>Top 10 cities by institutes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={geographicDistribution} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="city" type="category" width={100} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top Performing Institutes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Top Performing Institutes
+            </CardTitle>
+            <CardDescription>Institutes with most approved vehicle listings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topInstitutes.slice(0, 10).map((inst, index) => (
+                <div key={inst.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium">{inst.name}</p>
+                      <p className="text-xs text-muted-foreground">{inst.city}</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">{inst.count} vehicles</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-3">
+            <Button 
+              className="justify-start" 
+              variant="outline" 
+              onClick={() => navigate('/dashboard/institutes')}
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Review Institute Registrations
+              {stats.pendingInstitutes > 0 && (
+                <Badge variant="destructive" className="ml-auto">{stats.pendingInstitutes}</Badge>
+              )}
+            </Button>
+            <Button 
+              className="justify-start" 
+              variant="outline" 
+              onClick={() => navigate('/dashboard/vehicles')}
+            >
+              <Car className="h-4 w-4 mr-2" />
+              Review Vehicle Listings
+              {stats.pendingVehicles > 0 && (
+                <Badge variant="destructive" className="ml-auto">{stats.pendingVehicles}</Badge>
+              )}
+            </Button>
+            <Button 
+              className="justify-start" 
+              variant="outline" 
+              onClick={() => navigate('/tasks')}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Pick Revenue Task
+            </Button>
+            <Button 
+              className="justify-start" 
+              variant="outline" 
+              onClick={() => navigate('/dashboard/revenue')}
+            >
+              <IndianRupee className="h-4 w-4 mr-2" />
+              View Revenue Analytics
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Activate Subscription Dialog (Manual Admin Activation) */}
-      <Dialog open={showActivateDialog} onOpenChange={setShowActivateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manual Subscription Activation</DialogTitle>
-            <DialogDescription>
-              Manually activate subscription for {selectedInstitute?.instituteName} (Admin Override)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="plan">Subscription Plan</Label>
-              <Select value={selectedPlan} onValueChange={(value: 'Silver' | 'Gold' | 'Platinum') => setSelectedPlan(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Silver">Silver - ₹2,999/month</SelectItem>
-                  <SelectItem value="Gold">Gold - ₹5,999/month</SelectItem>
-                  <SelectItem value="Platinum">Platinum - ₹9,999/month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duration (months)</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                max="12"
-                value={durationMonths}
-                onChange={(e) => setDurationMonths(Number(e.target.value))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowActivateDialog(false)}>Cancel</Button>
-            <Button onClick={handleActivate} disabled={loading}>
-              Activate Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Extend Subscription Dialog */}
-      <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Extend Subscription</DialogTitle>
-            <DialogDescription>
-              Extend subscription for {selectedInstitute?.instituteName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="extend-duration">Additional Months</Label>
-              <Input
-                id="extend-duration"
-                type="number"
-                min="1"
-                max="12"
-                value={durationMonths}
-                onChange={(e) => setDurationMonths(Number(e.target.value))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowExtendDialog(false)}>Cancel</Button>
-            <Button onClick={handleExtend} disabled={loading}>
-              Extend Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Change Plan Dialog */}
-      <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Subscription Plan</DialogTitle>
-            <DialogDescription>
-              Change plan for {selectedInstitute?.instituteName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-plan">New Plan</Label>
-              <Select value={selectedPlan} onValueChange={(value: 'Silver' | 'Gold' | 'Platinum') => setSelectedPlan(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Silver">Silver - ₹2,999/month</SelectItem>
-                  <SelectItem value="Gold">Gold - ₹5,999/month</SelectItem>
-                  <SelectItem value="Platinum">Platinum - ₹9,999/month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowChangePlanDialog(false)}>Cancel</Button>
-            <Button onClick={handleChangePlan} disabled={loading}>
-              Change Plan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   )
 }
