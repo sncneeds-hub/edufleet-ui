@@ -1,215 +1,167 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { notificationsApi, Notification as ApiNotification } from '../lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { NotificationContext, Notification as NotificationType, NotificationContextType } from './notification-base';
-import { blink } from '@/lib/blink';
-import type { RealtimeChannel } from '@blinkdotnew/sdk';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Notification } from '@/types/subscriptionTypes';
+import {
+  getRecentUnreadNotifications,
+  getUnreadCount as getUnreadCountApi,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  getNotifications,
+} from '@/api/services/notificationService';
+
+interface NotificationContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  loading: boolean;
+  error: string | null;
+  loadNotifications: () => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  clearError: () => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Convert API notification to our Notification type
-  const convertNotification = (apiNotif: ApiNotification): NotificationType => ({
-    id: apiNotif._id,
-    userId: apiNotif.userId,
-    type: apiNotif.type,
-    title: apiNotif.title,
-    message: apiNotif.message,
-    link: apiNotif.link,
-    read: apiNotif.read,
-    createdAt: new Date(apiNotif.createdAt),
-    metadata: apiNotif.metadata,
-  });
-
-  // Fetch notifications from API
-  const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-
-    setIsLoading(true);
+  // Get current user ID from session/auth
+  const getCurrentUserId = useCallback((): string => {
+    // This should ideally come from AuthContext or session
+    // For now, we'll use a stored value or default
     try {
-      const { notifications: apiNotifications, unreadCount: count } = await notificationsApi.getAll({
-        limit: 50,
-      });
-      
-      const converted = apiNotifications.map(convertNotification);
-      setNotifications(converted);
-      setUnreadCount(count);
-    } catch (error: any) {
-      // Silently fail for network errors (backend not running)
-      // This is expected in deployed environments
-      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network')) {
-        setNotifications([]);
-        setUnreadCount(0);
-      } else {
-        console.error('Failed to fetch notifications:', error);
+      const stored = localStorage.getItem('auth_user');
+      if (stored) {
+        const user = JSON.parse(stored);
+        return user.id;
       }
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      console.error('Error getting user ID:', e);
     }
-  }, [user]);
+    return 'guest';
+  }, []);
 
-  // Mark notification as read
-  const markAsRead = useCallback(async (id: string) => {
+  const loadNotifications = useCallback(async () => {
     try {
-      await notificationsApi.markAsRead(id);
-      
-      // Update local state optimistically
+      setLoading(true);
+      setError(null);
+      const userId = getCurrentUserId();
+
+      const response = await getRecentUnreadNotifications(userId, 10);
+      if (response.success && response.data) {
+        setNotifications(response.data);
+        setUnreadCount(response.data.length);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load notifications';
+      setError(message);
+      console.error('Error loading notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [getCurrentUserId]);
+
+  const handleMarkAsRead = useCallback(async (notificationId: string) => {
+    try {
+      setError(null);
+      await markNotificationAsRead(notificationId);
+
+      // Update local state
       setNotifications(prev =>
-        prev.map(notif =>
-          notif.id === id ? { ...notif, read: true } : notif
+        prev.map(n =>
+          n.id === notificationId ? { ...n, isRead: true } : n
         )
       );
+
+      // Update unread count
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-      // Refetch to sync state
-      await fetchNotifications();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to mark notification as read';
+      setError(message);
+      console.error('Error marking notification as read:', err);
     }
-  }, [fetchNotifications]);
+  }, []);
 
-  // Mark all notifications as read
-  const markAllAsRead = useCallback(async () => {
+  const handleMarkAllAsRead = useCallback(async () => {
     try {
-      await notificationsApi.markAllAsRead();
-      
+      setError(null);
+      const userId = getCurrentUserId();
+
+      await markAllNotificationsAsRead(userId);
+
       // Update local state
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, read: true }))
-      );
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
-    } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
-      // Refetch to sync state
-      await fetchNotifications();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to mark all as read';
+      setError(message);
+      console.error('Error marking all as read:', err);
     }
-  }, [fetchNotifications]);
+  }, [getCurrentUserId]);
 
-  // Delete a notification
-  const deleteNotification = useCallback(async (id: string) => {
+  const handleDeleteNotification = useCallback(async (notificationId: string) => {
     try {
-      await notificationsApi.delete(id);
-      
+      setError(null);
+      await deleteNotification(notificationId);
+
       // Update local state
-      const notification = notifications.find(n => n.id === id);
-      setNotifications(prev => prev.filter(notif => notif.id !== id));
-      
-      if (notification && !notification.read) {
+      const deletedNotif = notifications.find(n => n.id === notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+
+      // Update unread count if deleted notification was unread
+      if (deletedNotif && !deletedNotif.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-    } catch (error) {
-      console.error('Failed to delete notification:', error);
-      // Refetch to sync state
-      await fetchNotifications();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete notification';
+      setError(message);
+      console.error('Error deleting notification:', err);
     }
-  }, [notifications, fetchNotifications]);
+  }, [notifications]);
 
-  // Clear all read notifications
-  const clearReadNotifications = useCallback(async () => {
-    try {
-      await notificationsApi.clearRead();
-      
-      // Update local state - keep only unread
-      setNotifications(prev => prev.filter(notif => !notif.read));
-    } catch (error) {
-      console.error('Failed to clear read notifications:', error);
-      // Refetch to sync state
-      await fetchNotifications();
-    }
-  }, [fetchNotifications]);
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
-  // Set up realtime notifications and fallback polling
+  // Load notifications on mount and set up interval for polling
   useEffect(() => {
-    if (!user) {
-      // Clear notifications when user logs out
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
+    loadNotifications();
 
-    // Initial fetch
-    fetchNotifications();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(() => {
+      loadNotifications();
+    }, 30000);
 
-    // Set up realtime subscription for instant notifications
-    let channel: RealtimeChannel | null = null;
-    
-    const setupRealtime = async () => {
-      try {
-        channel = blink.realtime.channel(`notifications-${user.id}`);
-        
-        await channel.subscribe({
-          userId: user.id,
-          metadata: { userName: user.instituteName || user.email }
-        });
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
 
-        // Listen for new notifications
-        const unsubMessage = channel.onMessage((message) => {
-          if (message.type === 'notification_created') {
-            const newNotification: NotificationType = {
-              id: message.data.id,
-              userId: message.data.userId,
-              type: message.data.type,
-              title: message.data.title,
-              message: message.data.message,
-              link: message.data.link,
-              read: message.data.read,
-              createdAt: new Date(message.data.createdAt),
-              metadata: message.data.metadata,
-            };
-
-            // Add to notifications list (prepend to show newest first)
-            setNotifications(prev => [newNotification, ...prev]);
-            
-            // Increment unread count
-            if (!newNotification.read) {
-              setUnreadCount(prev => prev + 1);
-            }
-          }
-        });
-
-        channelRef.current = channel;
-      } catch (error) {
-        console.error('Failed to setup realtime notifications:', error);
-      }
-    };
-
-    setupRealtime();
-
-    // Fallback: Poll every 2 minutes as backup (reduced from 30s since we have realtime)
-    // This ensures we stay in sync even if realtime connection drops
-    const fallbackInterval = setInterval(() => {
-      fetchNotifications();
-    }, 120000); // 2 minutes
-
-    // Cleanup
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
-      }
-      clearInterval(fallbackInterval);
-    };
-  }, [user, fetchNotifications]);
+  const value: NotificationContextType = {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    loadNotifications,
+    markAsRead: handleMarkAsRead,
+    markAllAsRead: handleMarkAllAsRead,
+    deleteNotification: handleDeleteNotification,
+    clearError,
+  };
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        isLoading,
-        fetchNotifications,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-        clearReadNotifications,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
 }
 
-
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within NotificationProvider');
+  }
+  return context;
+}

@@ -1,474 +1,469 @@
-import { useEffect, useState } from 'react'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { CheckCircle, XCircle, Clock, CreditCard, Calendar, TrendingUp } from 'lucide-react'
-import { api } from '@/lib/api'
-import { Institute } from '@/types'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  getAllUserSubscriptions,
+  getAllSubscriptionPlans,
+  extendSubscription,
+  resetBrowseCount,
+  suspendSubscription,
+  reactivateSubscription,
+  continueSubscription,
+  getSubscriptionStats,
+} from '@/api/services/subscriptionService';
+import { 
+  Users, 
+  TrendingUp, 
+  AlertCircle, 
+  Clock, 
+  Calendar,
+  RotateCcw,
+  Ban,
+  CheckCircle,
+  ArrowRight,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export function SubscriptionManagement() {
-  const [subscriptions, setSubscriptions] = useState<Institute[]>([])
-  const [selectedInstitute, setSelectedInstitute] = useState<Institute | null>(null)
-  const [showActivateDialog, setShowActivateDialog] = useState(false)
-  const [showExtendDialog, setShowExtendDialog] = useState(false)
-  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<'Silver' | 'Gold' | 'Platinum'>('Silver')
-  const [durationMonths, setDurationMonths] = useState(1)
-  const [loading, setLoading] = useState(false)
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  
+  const [actionDialog, setActionDialog] = useState<{
+    open: boolean;
+    type: 'extend' | 'reset' | 'suspend' | 'reactivate' | 'continue' | null;
+    subscription: any;
+  }>({
+    open: false,
+    type: null,
+    subscription: null,
+  });
+  
+  const [extendMonths, setExtendMonths] = useState(1);
+  const [suspendReason, setSuspendReason] = useState('');
 
   useEffect(() => {
-    loadSubscriptions()
-  }, [])
+    loadData();
+  }, [statusFilter, planFilter]);
 
-  const loadSubscriptions = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.subscriptions.getAll()
-      setSubscriptions(data)
-    } catch (error) {
-      toast.error('Failed to load subscriptions')
-    }
-  }
+      setLoading(true);
+      
+      const filters: any = {};
+      if (statusFilter !== 'all') filters.status = statusFilter;
+      if (planFilter !== 'all') filters.planId = planFilter;
+      
+      const [subsResponse, plansResponse, statsResponse] = await Promise.all([
+        getAllUserSubscriptions(filters),
+        getAllSubscriptionPlans(),
+        getSubscriptionStats(),
+      ]);
 
-  const handleActivate = async () => {
-    if (!selectedInstitute) return
+      if (subsResponse.success && subsResponse.data) {
+        setSubscriptions(subsResponse.data.items);
+      }
 
-    setLoading(true)
-    try {
-      await api.subscriptions.activate(selectedInstitute._id || selectedInstitute.id!, selectedPlan, durationMonths)
-      toast.success(`${selectedPlan} subscription activated for ${durationMonths} month(s)`)
-      setShowActivateDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to activate subscription')
+      if (plansResponse.success && plansResponse.data) {
+        setPlans(plansResponse.data);
+      }
+
+      if (statsResponse.success && statsResponse.data) {
+        setStats(statsResponse.data);
+      }
+    } catch (err) {
+      console.error('Error loading data:', err);
+      toast.error('Failed to load subscription data');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleCancel = async (institute: Institute) => {
-    setLoading(true)
+  const handleAction = async () => {
+    if (!actionDialog.subscription) return;
+
     try {
-      await api.subscriptions.cancel(institute._id || institute.id!)
-      toast.success('Subscription cancelled')
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to cancel subscription')
-    } finally {
-      setLoading(false)
+      const subId = actionDialog.subscription.id;
+
+      switch (actionDialog.type) {
+        case 'extend':
+          const currentEndDate = new Date(actionDialog.subscription.endDate);
+          const newEndDate = new Date(currentEndDate);
+          newEndDate.setMonth(newEndDate.getMonth() + extendMonths);
+          await extendSubscription({
+            userSubscriptionId: subId,
+            newEndDate: newEndDate.toISOString(),
+            notes: `Extended by ${extendMonths} month(s)`,
+          });
+          toast.success(`Subscription extended by ${extendMonths} month(s)`);
+          break;
+
+        case 'continue':
+          await continueSubscription(subId, extendMonths);
+          toast.success(`Subscription continued for ${extendMonths} month(s)`);
+          break;
+
+        case 'reset':
+          await resetBrowseCount({ userSubscriptionId: subId });
+          toast.success('Browse count reset successfully');
+          break;
+
+        case 'suspend':
+          await suspendSubscription({
+            userSubscriptionId: subId,
+            reason: suspendReason || 'Suspended by admin',
+          });
+          toast.success('Subscription suspended');
+          break;
+
+        case 'reactivate':
+          await reactivateSubscription(subId);
+          toast.success('Subscription reactivated');
+          break;
+      }
+
+      setActionDialog({ open: false, type: null, subscription: null });
+      setExtendMonths(1);
+      setSuspendReason('');
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Action failed');
     }
-  }
+  };
 
-  const handleExtend = async () => {
-    if (!selectedInstitute) return
+  const openActionDialog = (type: any, subscription: any) => {
+    setActionDialog({ open: true, type, subscription });
+  };
 
-    setLoading(true)
-    try {
-      await api.subscriptions.extend(selectedInstitute._id || selectedInstitute.id!, durationMonths)
-      toast.success(`Subscription extended by ${durationMonths} month(s)`)
-      setShowExtendDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to extend subscription')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleChangePlan = async () => {
-    if (!selectedInstitute) return
-
-    setLoading(true)
-    try {
-      await api.subscriptions.changePlan(selectedInstitute._id || selectedInstitute.id!, selectedPlan)
-      toast.success(`Plan changed to ${selectedPlan}`)
-      setShowChangePlanDialog(false)
-      setSelectedInstitute(null)
-      loadSubscriptions()
-    } catch (error) {
-      toast.error('Failed to change plan')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const activeSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'active')
-  const inactiveSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'inactive')
-  const expiredSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'expired')
-  const cancelledSubscriptions = subscriptions.filter(s => s.subscriptionStatus === 'cancelled')
-
-  const getPlanColor = (plan?: string) => {
-    switch (plan) {
-      case 'Platinum': return 'from-purple-400 to-purple-600'
-      case 'Gold': return 'from-yellow-400 to-yellow-600'
-      case 'Silver': return 'from-slate-400 to-slate-600'
-      default: return 'from-gray-400 to-gray-600'
-    }
-  }
-
-  const getStatusBadge = (status?: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <Badge className="bg-green-500">Active</Badge>
-      case 'expired': return <Badge variant="destructive">Expired</Badge>
-      case 'cancelled': return <Badge variant="secondary">Cancelled</Badge>
-      default: return <Badge variant="outline">Inactive</Badge>
+      case 'active':
+        return <Badge className="bg-green-100 text-green-700">Active</Badge>;
+      case 'expired':
+        return <Badge className="bg-red-100 text-red-700">Expired</Badge>;
+      case 'suspended':
+        return <Badge className="bg-gray-100 text-gray-700">Suspended</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
     }
+  };
+
+  const getDaysRemaining = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
   }
-
-  const SubscriptionCard = ({ institute }: { institute: Institute }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{institute.instituteName}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Reg. No: {institute.registrationNumber}</p>
-          </div>
-          <div className="flex gap-2 items-center">
-            {getStatusBadge(institute.subscriptionStatus)}
-            {institute.subscriptionPlan && (
-              <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getPlanColor(institute.subscriptionPlan)} flex items-center justify-center`}>
-                <span className="text-white font-bold">{institute.subscriptionPlan[0]}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Plan
-            </p>
-            <p className="font-medium">{institute.subscriptionPlan || 'No Plan'}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Status
-            </p>
-            <p className="font-medium capitalize">{institute.subscriptionStatus || 'inactive'}</p>
-          </div>
-        </div>
-
-        {institute.subscriptionStartDate && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Start Date
-              </p>
-              <p className="font-medium">{format(new Date(institute.subscriptionStartDate), 'MMM dd, yyyy')}</p>
-            </div>
-            {institute.subscriptionEndDate && (
-              <div>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  End Date
-                </p>
-                <p className="font-medium">{format(new Date(institute.subscriptionEndDate), 'MMM dd, yyyy')}</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-2 pt-2 flex-wrap">
-          {institute.subscriptionStatus === 'active' ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setSelectedPlan(institute.subscriptionPlan || 'Silver')
-                  setShowChangePlanDialog(true)
-                }}
-                disabled={loading}
-              >
-                Change Plan
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setDurationMonths(1)
-                  setShowExtendDialog(true)
-                }}
-                disabled={loading}
-              >
-                Extend
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => handleCancel(institute)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setSelectedInstitute(institute)
-                  setSelectedPlan(institute.subscriptionPlan || 'Silver')
-                  setDurationMonths(1)
-                  setShowActivateDialog(true)
-                }}
-                disabled={loading}
-              >
-                Manual Activate
-              </Button>
-              <Badge variant="secondary" className="ml-2">
-                Admin can manually enable subscription
-              </Badge>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
 
   return (
-    <DashboardLayout activeTab="subscriptions">
-      <div className="space-y-6">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold mb-2">Subscription Management</h2>
-          <p className="text-muted-foreground">Manage institute subscriptions and plans</p>
+          <h1 className="text-3xl font-bold">Subscription Management</h1>
+          <p className="text-muted mt-1">Manage user subscriptions and plans</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-500">{activeSubscriptions.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Inactive</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-500">{inactiveSubscriptions.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Expired</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-500">{expiredSubscriptions.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Cancelled</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-500">{cancelledSubscriptions.length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="active" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="active">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Active ({activeSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="inactive">
-              <Clock className="h-4 w-4 mr-2" />
-              Inactive ({inactiveSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="expired">
-              <XCircle className="h-4 w-4 mr-2" />
-              Expired ({expiredSubscriptions.length})
-            </TabsTrigger>
-            <TabsTrigger value="cancelled">
-              <XCircle className="h-4 w-4 mr-2" />
-              Cancelled ({cancelledSubscriptions.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="active" className="space-y-4">
-            {activeSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No active subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              activeSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="inactive" className="space-y-4">
-            {inactiveSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No inactive subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              inactiveSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="expired" className="space-y-4">
-            {expiredSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No expired subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              expiredSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="cancelled" className="space-y-4">
-            {cancelledSubscriptions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No cancelled subscriptions
-                </CardContent>
-              </Card>
-            ) : (
-              cancelledSubscriptions.map(institute => (
-                <SubscriptionCard key={institute._id || institute.id} institute={institute} />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
 
-      {/* Activate Subscription Dialog (Manual Admin Activation) */}
-      <Dialog open={showActivateDialog} onOpenChange={setShowActivateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manual Subscription Activation</DialogTitle>
-            <DialogDescription>
-              Manually activate subscription for {selectedInstitute?.instituteName} (Admin Override)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="plan">Subscription Plan</Label>
-              <Select value={selectedPlan} onValueChange={(value: 'Silver' | 'Gold' | 'Platinum') => setSelectedPlan(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Silver">Silver - ₹2,999/month</SelectItem>
-                  <SelectItem value="Gold">Gold - ₹5,999/month</SelectItem>
-                  <SelectItem value="Platinum">Platinum - ₹9,999/month</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted">Total Subscriptions</p>
+                <p className="text-2xl font-bold mt-1">{stats.totalSubscriptions}</p>
+              </div>
+              <Users className="w-8 h-8 text-primary opacity-20" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duration (months)</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                max="12"
-                value={durationMonths}
-                onChange={(e) => setDurationMonths(Number(e.target.value))}
-              />
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted">Active</p>
+                <p className="text-2xl font-bold mt-1 text-green-600">{stats.activeSubscriptions}</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-600 opacity-20" />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowActivateDialog(false)}>Cancel</Button>
-            <Button onClick={handleActivate} disabled={loading}>
-              Activate Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted">Expiring Soon</p>
+                <p className="text-2xl font-bold mt-1 text-amber-600">{stats.expiringSoon}</p>
+              </div>
+              <Clock className="w-8 h-8 text-amber-600 opacity-20" />
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted">Revenue (Monthly)</p>
+                <p className="text-2xl font-bold mt-1">₹{stats.revenueProjection.toLocaleString()}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-primary opacity-20" />
+            </div>
+          </Card>
+        </div>
+      )}
 
-      {/* Extend Subscription Dialog */}
-      <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Extend Subscription</DialogTitle>
-            <DialogDescription>
-              Extend subscription for {selectedInstitute?.instituteName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="extend-duration">Additional Months</Label>
-              <Input
-                id="extend-duration"
-                type="number"
-                min="1"
-                max="12"
-                value={durationMonths}
-                onChange={(e) => setDurationMonths(Number(e.target.value))}
-              />
-            </div>
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowExtendDialog(false)}>Cancel</Button>
-            <Button onClick={handleExtend} disabled={loading}>
-              Extend Subscription
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="flex-1">
+            <Select value={planFilter} onValueChange={setPlanFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by plan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {plans.map((plan) => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    {plan.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" onClick={loadData}>
+            Refresh
+          </Button>
+        </div>
+      </Card>
 
-      {/* Change Plan Dialog */}
-      <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+      {/* Subscriptions Table */}
+      <Card className="p-6">
+        <h2 className="text-xl font-bold mb-4">User Subscriptions</h2>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User ID</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Browse Used</TableHead>
+                <TableHead>Listings Used</TableHead>
+                <TableHead>Valid Until</TableHead>
+                <TableHead>Days Left</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subscriptions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted py-8">
+                    No subscriptions found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                subscriptions.map((sub) => {
+                  const daysRemaining = getDaysRemaining(sub.endDate);
+                  const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 7;
+                  const isExpired = daysRemaining < 0;
+
+                  return (
+                    <TableRow key={sub.id}>
+                      <TableCell className="font-mono text-sm">{sub.userId.slice(0, 8)}...</TableCell>
+                      <TableCell>{sub.planName}</TableCell>
+                      <TableCell>{getStatusBadge(sub.status)}</TableCell>
+                      <TableCell>{sub.browseCountUsed}</TableCell>
+                      <TableCell>{sub.listingCountUsed}</TableCell>
+                      <TableCell className="text-sm">
+                        {new Date(sub.endDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <span className={
+                          isExpired ? 'text-red-600 font-medium' :
+                          isExpiringSoon ? 'text-amber-600 font-medium' :
+                          'text-green-600'
+                        }>
+                          {isExpired ? 'Expired' : `${daysRemaining}d`}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openActionDialog('continue', sub)}
+                            title="Continue Subscription"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openActionDialog('extend', sub)}
+                            title="Extend Subscription"
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openActionDialog('reset', sub)}
+                            title="Reset Browse Count"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                          {sub.status === 'active' ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => openActionDialog('suspend', sub)}
+                              title="Suspend Subscription"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          ) : sub.status === 'suspended' ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700"
+                              onClick={() => openActionDialog('reactivate', sub)}
+                              title="Reactivate Subscription"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
+      {/* Action Dialog */}
+      <Dialog open={actionDialog.open} onOpenChange={(open) => !open && setActionDialog({ open: false, type: null, subscription: null })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Subscription Plan</DialogTitle>
+            <DialogTitle>
+              {actionDialog.type === 'extend' && 'Extend Subscription'}
+              {actionDialog.type === 'continue' && 'Continue Subscription'}
+              {actionDialog.type === 'reset' && 'Reset Browse Count'}
+              {actionDialog.type === 'suspend' && 'Suspend Subscription'}
+              {actionDialog.type === 'reactivate' && 'Reactivate Subscription'}
+            </DialogTitle>
             <DialogDescription>
-              Change plan for {selectedInstitute?.instituteName}
+              {actionDialog.type === 'extend' && 'Extend the subscription end date by the specified number of months.'}
+              {actionDialog.type === 'continue' && 'Continue the subscription for additional months.'}
+              {actionDialog.type === 'reset' && 'Reset the browse count to zero for this user.'}
+              {actionDialog.type === 'suspend' && 'Suspend this subscription. The user will lose access until reactivated.'}
+              {actionDialog.type === 'reactivate' && 'Reactivate this subscription and restore user access.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-plan">New Plan</Label>
-              <Select value={selectedPlan} onValueChange={(value: 'Silver' | 'Gold' | 'Platinum') => setSelectedPlan(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Silver">Silver - ₹2,999/month</SelectItem>
-                  <SelectItem value="Gold">Gold - ₹5,999/month</SelectItem>
-                  <SelectItem value="Platinum">Platinum - ₹9,999/month</SelectItem>
-                </SelectContent>
-              </Select>
+
+          {actionDialog.subscription && (
+            <div className="space-y-4 py-4">
+              <div>
+                <p className="text-sm font-medium">User ID</p>
+                <p className="text-sm text-muted font-mono">{actionDialog.subscription.userId}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Plan</p>
+                <p className="text-sm text-muted">{actionDialog.subscription.planName}</p>
+              </div>
+
+              {(actionDialog.type === 'extend' || actionDialog.type === 'continue') && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Number of Months</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={extendMonths}
+                    onChange={(e) => setExtendMonths(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+              )}
+
+              {actionDialog.type === 'suspend' && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Reason (Optional)</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter suspension reason..."
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowChangePlanDialog(false)}>Cancel</Button>
-            <Button onClick={handleChangePlan} disabled={loading}>
-              Change Plan
+            <Button
+              variant="outline"
+              onClick={() => setActionDialog({ open: false, type: null, subscription: null })}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAction}>
+              Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
-  )
+    </div>
+  );
 }
