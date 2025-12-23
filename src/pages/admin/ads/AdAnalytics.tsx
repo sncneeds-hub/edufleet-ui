@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAds } from '../../../context/AdContext';
 import { AnalyticsChart } from '../../../components/ads/AnalyticsChart';

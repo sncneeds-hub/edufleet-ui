@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -15,7 +15,14 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
     hmr: {
-      overlay: false, // Disable Vite's built-in error overlay
+      overlay: false, // Disable Vite's built-in error overlay (we use our own ErrorOverlay)
     },
-  },
-})
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  }
+});
