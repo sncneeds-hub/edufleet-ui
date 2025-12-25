@@ -1,9 +1,5 @@
-import { 
-  mockTeachers, 
-  mockApplications,
-  getTeacherApplications,
-  getTeacherInterviews
-} from '@/mock/teacherData';
+import { apiClient, APIError } from '@/lib/apiClient';
+import { API_CONFIG } from '../config';
 import type { ApiResponse, PaginatedResponse } from '../types';
 
 /**
@@ -11,18 +7,27 @@ import type { ApiResponse, PaginatedResponse } from '../types';
  * Handles all teacher-related API operations
  */
 
-// Teacher types (matching mock data structure)
+// Teacher types
 export interface Teacher {
   id: string;
   name: string;
   email: string;
   phone: string;
-  qualification: string;
-  experience: string;
-  subjects: string[];
   location: string;
-  photo?: string;
+  experience: number;
+  qualifications: string[];
+  subjects: string[];
+  bio: string;
   resume?: string;
+  avatar: string;
+  isAvailable: boolean;
+  expectedSalary?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  preferredJobType?: string[];
+  createdAt?: string;
   status?: 'active' | 'inactive';
 }
 
@@ -39,13 +44,12 @@ export interface TeacherFilters {
   searchTerm?: string;
   subjects?: string[];
   location?: string;
-  experience?: string;
+  experienceMin?: number;
+  experienceMax?: number;
+  isAvailable?: boolean;
   page?: number;
   pageSize?: number;
 }
-
-// Mock delay helper
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Get all teachers with optional filters
@@ -53,70 +57,58 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function getTeachers(
   filters?: TeacherFilters
 ): Promise<ApiResponse<PaginatedResponse<Teacher>>> {
-  await delay(300);
-
-  let filtered = [...mockTeachers];
-
-  // Apply filters
-  if (filters?.searchTerm) {
-    const term = filters.searchTerm.toLowerCase();
-    filtered = filtered.filter(
-      t =>
-        t.name.toLowerCase().includes(term) ||
-        t.qualification.toLowerCase().includes(term) ||
-        t.subjects.some(s => s.toLowerCase().includes(term))
-    );
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('role', 'teacher'); // Filter users by teacher role
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            queryParams.append(key, value.join(','));
+          } else {
+            queryParams.append(key, String(value));
+          }
+        }
+      });
+    }
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/users?${queryString}`; // Teachers are users with role='teacher'
+    
+    const data = await apiClient.get<PaginatedResponse<Teacher>>(endpoint, { requiresAuth: false });
+    
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch teachers');
   }
-
-  if (filters?.subjects && filters.subjects.length > 0) {
-    filtered = filtered.filter(t =>
-      filters.subjects!.some(sub => t.subjects.includes(sub))
-    );
-  }
-
-  if (filters?.location) {
-    filtered = filtered.filter(t =>
-      t.location.toLowerCase().includes(filters.location!.toLowerCase())
-    );
-  }
-
-  // Pagination
-  const page = filters?.page || 1;
-  const pageSize = filters?.pageSize || 12;
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedItems = filtered.slice(startIndex, endIndex);
-
-  return {
-    success: true,
-    data: {
-      items: paginatedItems,
-      total: filtered.length,
-      page,
-      pageSize,
-      hasMore: endIndex < filtered.length
-    },
-    timestamp: new Date().toISOString()
-  };
 }
 
 /**
  * Get single teacher by ID
  */
-export async function getTeacherById(id: string): Promise<ApiResponse<Teacher>> {
-  await delay(200);
-
-  const teacher = mockTeachers.find(t => t.id === id);
-
-  if (!teacher) {
-    throw new Error('Teacher not found');
+export async function getTeacherById(id: string): Promise<ApiResponse<Teacher | null>> {
+  try {
+    const teacher = await apiClient.get<Teacher>(`/users/${id}`, { requiresAuth: false });
+    
+    return {
+      success: true,
+      data: teacher,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch teacher');
   }
-
-  return {
-    success: true,
-    data: teacher,
-    timestamp: new Date().toISOString()
-  };
 }
 
 /**
@@ -125,15 +117,20 @@ export async function getTeacherById(id: string): Promise<ApiResponse<Teacher>> 
 export async function getApplicationsForTeacher(
   teacherId: string
 ): Promise<ApiResponse<Application[]>> {
-  await delay(300);
-
-  const applications = getTeacherApplications(teacherId);
-
-  return {
-    success: true,
-    data: applications,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    const applications = await apiClient.get<Application[]>(API_CONFIG.ENDPOINTS.MY_JOB_APPLICATIONS);
+    
+    return {
+      success: true,
+      data: applications,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch applications');
+  }
 }
 
 /**
@@ -142,15 +139,24 @@ export async function getApplicationsForTeacher(
 export async function getInterviewsForTeacher(
   teacherId: string
 ): Promise<ApiResponse<any[]>> {
-  await delay(300);
-
-  const interviews = getTeacherInterviews(teacherId);
-
-  return {
-    success: true,
-    data: interviews,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    // Interviews are not yet implemented in backend
+    // Return applications with 'shortlisted' status as interviews
+    const applications = await apiClient.get<Application[]>(
+      `${API_CONFIG.ENDPOINTS.MY_JOB_APPLICATIONS}?status=shortlisted`
+    );
+    
+    return {
+      success: true,
+      data: applications,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch interviews');
+  }
 }
 
 /**
@@ -159,26 +165,38 @@ export async function getInterviewsForTeacher(
 export async function getApplicationsForJob(
   jobId: string
 ): Promise<ApiResponse<Application[]>> {
-  await delay(300);
-
-  const applications = mockApplications.filter(app => app.jobId === jobId);
-
-  return {
-    success: true,
-    data: applications,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    const applications = await apiClient.get<Application[]>(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS(jobId));
+    
+    return {
+      success: true,
+      data: applications,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch applications');
+  }
 }
 
 /**
  * Get all applications (for institute view)
  */
 export async function getAllApplications(): Promise<ApiResponse<Application[]>> {
-  await delay(300);
-
-  return {
-    success: true,
-    data: mockApplications,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    const applications = await apiClient.get<Application[]>('/jobs/applications/list');
+    
+    return {
+      success: true,
+      data: applications,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch applications');
+  }
 }

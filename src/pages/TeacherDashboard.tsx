@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { getTeacherApplications, getTeacherInterviews } from '@/mock/teacherData';
 import { 
   Briefcase, 
   Calendar, 
@@ -38,9 +38,30 @@ export function TeacherDashboard() {
     location: user?.location || '',
     bio: user?.bio || '',
   });
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const applications = user ? getTeacherApplications(user.id) : [];
-  const interviews = user ? getTeacherInterviews(user.id) : [];
+  useEffect(() => {
+    loadApplications();
+  }, [user]);
+
+  const loadApplications = async () => {
+    if (!user || user.role !== 'teacher') return;
+    
+    try {
+      setLoading(true);
+      const response = await api.jobs.getApplications();
+      setApplications(response.data || []);
+    } catch (error) {
+      console.error('Failed to load applications:', error);
+      toast.error('Failed to load applications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Separate interviews from applications that have interviews scheduled
+  const interviews = applications.filter(app => app.interviewScheduled);
 
   const handleSaveProfile = () => {
     if (user) {
@@ -247,12 +268,14 @@ export function TeacherDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                applications.map((app) => (
-                  <Card key={app.id}>
+                applications.map((app) => {
+                  const job = app.jobId; // Populated job data
+                  return (
+                  <Card key={app._id || app.id}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle>{app.jobTitle}</CardTitle>
+                          <CardTitle>{job?.title || 'Job'}</CardTitle>
                           <CardDescription className="flex items-center gap-2 mt-1">
                             <MapPin className="h-3 w-3" />
                             {app.instituteName}
@@ -302,7 +325,7 @@ export function TeacherDashboard() {
                         )}
 
                         <div className="flex gap-2">
-                          <Link to={`/job/${app.jobId}`}>
+                          <Link to={`/job/${job?._id || app.jobId}`}>
                             <Button variant="outline" size="sm">
                               <Eye className="h-4 w-4 mr-2" />
                               View Job
@@ -312,7 +335,8 @@ export function TeacherDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               )}
             </div>
           </TabsContent>
@@ -327,21 +351,23 @@ export function TeacherDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                interviews.map((interview) => (
-                  <Card key={interview.id}>
+                interviews.map((app) => {
+                  const interview = app.interviewScheduled;
+                  return (
+                  <Card key={app._id || app.id}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-2">
                             {getInterviewModeIcon(interview.mode)}
-                            Interview - {interview.instituteName}
+                            Interview - {app.instituteName}
                           </CardTitle>
                           <CardDescription className="mt-1">
-                            Application ID: {interview.applicationId}
+                            Job: {app.jobId?.title || 'N/A'}
                           </CardDescription>
                         </div>
-                        <Badge variant={interview.status === 'completed' ? 'secondary' : 'default'}>
-                          {interview.status}
+                        <Badge variant="default">
+                          Scheduled
                         </Badge>
                       </div>
                     </CardHeader>
@@ -384,16 +410,10 @@ export function TeacherDashboard() {
                           <p>{interview.notes}</p>
                         </div>
                       )}
-
-                      {interview.feedback && (
-                        <div className="p-3 bg-green-50 dark:bg-green-950 rounded text-sm">
-                          <p className="font-semibold mb-1">Feedback:</p>
-                          <p>{interview.feedback}</p>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               )}
             </div>
           </TabsContent>

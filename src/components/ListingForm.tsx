@@ -94,7 +94,7 @@ export function ListingForm() {
 
       setUploadedImages(prev => [...prev, ...newImages]);
 
-      // Upload to mock API
+      // Upload to backend
       const response = await api.vehicles.uploadVehicleImages(fileArray);
       
       if (response.success) {
@@ -169,7 +169,7 @@ export function ListingForm() {
       await incrementListingCount(user.id);
     }
 
-    toast.success('Listing created successfully! (Mock)');
+    toast.success('Listing created successfully!');
     console.log('Form data:', { ...formData, images: imageUrls });
   };
 

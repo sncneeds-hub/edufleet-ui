@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getUserSubscriptionWithStats, continueSubscription } from '@/api/services/subscriptionService';
+import { getUserSubscription, extendUserSubscription, getSubscriptionUsageStats } from '@/api/services/subscriptionService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/alert';
@@ -25,10 +25,15 @@ export function SubscriptionStatus() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getUserSubscriptionWithStats(user!.id);
-      if (response.success && response.data) {
-        setSubscription(response.data.subscription);
-        setStats(response.data.stats);
+      const subscriptionResponse = await getUserSubscription(user!.id);
+      if (subscriptionResponse.success && subscriptionResponse.data) {
+        setSubscription(subscriptionResponse.data);
+        
+        // Also fetch stats
+        const statsResponse = await getSubscriptionUsageStats(user!.id);
+        if (statsResponse.success && statsResponse.data) {
+          setStats(statsResponse.data);
+        }
       }
     } catch (err) {
       setError('Failed to load subscription details');
@@ -44,7 +49,7 @@ export function SubscriptionStatus() {
     try {
       setContinuing(true);
       setError(null);
-      const response = await continueSubscription(subscription.id, 1);
+      const response = await extendUserSubscription(subscription.id, { months: 1 });
       if (response.success) {
         setSubscription(response.data);
         await loadSubscription(); // Reload to get fresh stats

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { JobCard } from '@/components/JobCard';
 import { useJobs } from '@/hooks/useApi';
 import { Card } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Filter, Briefcase } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AdSlot } from '@/components/ads/AdSlot';
-import { mockJobs } from '@/mock/jobData'; // Import mockJobs for static filter options
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ export function JobBrowse() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [uniqueDepartments, setUniqueDepartments] = useState<string[]>([]);
   
   // Use server-side filtering
   const { jobs, loading } = useJobs({
@@ -29,8 +29,13 @@ export function JobBrowse() {
     pageSize: 100 // Fetch more items since we don't have pagination UI yet
   });
 
-  // Calculate unique departments from all available data (static)
-  const uniqueDepartments = Array.from(new Set(mockJobs.map(j => j.department)));
+  // Extract unique departments from loaded jobs
+  useEffect(() => {
+    if (jobs.length > 0) {
+      const departments = Array.from(new Set(jobs.map(j => j.department)));
+      setUniqueDepartments(departments);
+    }
+  }, [jobs]);
 
   const handleClearFilters = () => {
     setSearchTerm('');

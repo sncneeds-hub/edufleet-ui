@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/api';
-import type { Vehicle, VehicleFilters, CreateVehicleDto, UpdateVehicleDto } from '@/api/types';
-import { mockJobs } from '@/mock/jobData';
-import type { Job } from '@/api/types';
+import type { Vehicle, VehicleFilters, CreateVehicleDto, UpdateVehicleDto, Job } from '@/api/types';
+import type { Teacher, TeacherFilters } from '@/api/services/teacherService';
 
 /**
  * Hook to fetch vehicles with filters
@@ -389,8 +388,6 @@ export function useJobs(filters?: any) {
     } catch (err: any) {
       setError(err.error || 'Failed to load jobs');
       console.error('Error fetching jobs:', err);
-      // Fallback to mock data on error
-      setJobs(mockJobs);
     } finally {
       setLoading(false);
     }
@@ -426,9 +423,6 @@ export function useJobById(id: string) {
       } catch (err: any) {
         setError(err.error || 'Failed to load job');
         console.error('Error fetching job:', err);
-        // Fallback to mock data
-        const found = mockJobs.find(j => j.id === id);
-        setJob(found || null);
       } finally {
         setLoading(false);
       }
@@ -438,4 +432,78 @@ export function useJobById(id: string) {
   }, [id]);
 
   return { job, loading, error };
+}
+
+/**
+ * Hook to fetch teachers with filters
+ */
+export function useTeachers(filters?: TeacherFilters) {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
+  const fetchTeachers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.teachers.getTeachers(filters);
+      setTeachers(response.data.items);
+      setTotal(response.data.total);
+      setHasMore(response.data.hasMore);
+    } catch (err: any) {
+      setError(err.error || 'Failed to load teachers');
+      console.error('Error fetching teachers:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [JSON.stringify(filters)]);
+
+  useEffect(() => {
+    fetchTeachers();
+  }, [fetchTeachers]);
+
+  return {
+    teachers,
+    loading,
+    error,
+    total,
+    hasMore,
+    refetch: fetchTeachers,
+  };
+}
+
+/**
+ * Hook to fetch a single teacher by ID
+ */
+export function useTeacherById(id: string | undefined) {
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    async function fetchTeacher() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.teachers.getTeacherById(id);
+        setTeacher(response.data);
+      } catch (err: any) {
+        setError(err.error || 'Failed to load teacher');
+        console.error('Error fetching teacher:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTeacher();
+  }, [id]);
+
+  return { teacher, loading, error };
 }

@@ -1,5 +1,4 @@
 import { API_CONFIG } from '../api/config';
-import { mockApiClient } from './mockApiClient';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -20,12 +19,11 @@ export class APIError extends Error {
  * Get authentication token from localStorage
  */
 function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('token');
 }
 
 /**
  * Main API client for making HTTP requests
- * Falls back to mock client when MOCK_MODE is enabled
  */
 export const apiClient = {
   /**
@@ -74,10 +72,6 @@ export const apiClient = {
    * Make a request with proper headers and error handling
    */
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    // Use mock client if mock mode is enabled
-    if (API_CONFIG.MOCK_MODE) {
-      return mockApiClient.request<T>(endpoint, options);
-    }
 
     const { requiresAuth = true, headers = {}, ...fetchOptions } = options;
 
@@ -143,11 +137,6 @@ export const apiClient = {
    * Upload file(s)
    */
   async uploadFile(endpoint: string, file: File, fieldName = 'image'): Promise<{ url: string }> {
-    // Use mock client if mock mode is enabled
-    if (API_CONFIG.MOCK_MODE) {
-      return mockApiClient.uploadFile(endpoint, file, fieldName);
-    }
-
     const formData = new FormData();
     formData.append(fieldName, file);
 
@@ -189,11 +178,6 @@ export const apiClient = {
    * Upload multiple files
    */
   async uploadFiles(endpoint: string, files: File[], fieldName = 'images'): Promise<{ urls: string[] }> {
-    // Use mock client if mock mode is enabled
-    if (API_CONFIG.MOCK_MODE) {
-      return mockApiClient.uploadFiles(endpoint, files, fieldName);
-    }
-
     const formData = new FormData();
     files.forEach(file => {
       formData.append(fieldName, file);

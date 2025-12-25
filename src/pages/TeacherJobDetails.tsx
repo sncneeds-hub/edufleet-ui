@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobs } from '@/mock/jobData';
-import { mockApplications } from '@/mock/teacherData';
+import { jobService } from '@/api/services/jobService';
+import type { Job } from '@/api/services/jobService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,13 +35,50 @@ export function TeacherJobDetails() {
   const { user, isAuthenticated } = useAuth();
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
+  const [job, setJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hasApplied, setHasApplied] = useState(false);
 
-  const job = mockJobs.find((j) => j.id === id);
+  useEffect(() => {
+    if (id) {
+      loadJob();
+      checkApplicationStatus();
+    }
+  }, [id]);
 
-  // Check if user has already applied
-  const hasApplied = mockApplications.some(
-    app => app.jobId === id && app.teacherId === user?.id
-  );
+  const loadJob = async () => {
+    try {
+      setLoading(true);
+      const response = await jobService.getJob(id!);
+      setJob(response);
+    } catch (error) {
+      toast.error('Failed to load job details');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkApplicationStatus = async () => {
+    if (!user || user.role !== 'teacher') return;
+    try {
+      const response = await jobService.getMyApplications();
+      const applied = response.some(app => (app.jobId === id));
+      setHasApplied(applied);
+    } catch (error) {
+      console.error('Failed to check application status', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -72,21 +109,36 @@ export function TeacherJobDetails() {
     setShowApplyDialog(true);
   };
 
-  const submitApplication = () => {
+  const submitApplication = async () => {
     if (!coverLetter.trim()) {
       toast.error('Please write a cover letter');
       return;
     }
 
-    // Mock application submission
-    toast.success('Application submitted successfully!');
-    setShowApplyDialog(false);
-    setCoverLetter('');
-    
-    // Navigate to dashboard after a short delay
-    setTimeout(() => {
-      navigate('/teacher/dashboard');
-    }, 1500);
+    try {
+      await jobService.applyToJob(id!, {
+        coverLetter,
+        applicantName: user?.name || '',
+        applicantEmail: user?.email || '',
+        status: 'pending',
+        appliedAt: new Date().toISOString(),
+        jobId: id!,
+        applicantId: user?.id || ''
+      });
+      
+      toast.success('Application submitted successfully!');
+      setShowApplyDialog(false);
+      setCoverLetter('');
+      setHasApplied(true);
+      
+      // Navigate to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/teacher/dashboard');
+      }, 1500);
+    } catch (error) {
+      toast.error('Failed to submit application');
+      console.error(error);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -123,12 +175,9 @@ export function TeacherJobDetails() {
                     <CardTitle className="text-3xl">{job.title}</CardTitle>
                     <div className="flex items-center gap-2">
                       <Building className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-lg font-semibold">{job.instituteName}</span>
+                      <span className="text-lg font-semibold">{job.institute}</span>
                     </div>
                   </div>
-                  {job.isPriority && (
-                    <Badge className="bg-amber-500 text-white">Priority</Badge>
-                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -145,9 +194,7 @@ export function TeacherJobDetails() {
                   </div>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {job.salary.currency}{job.salary.min.toLocaleString()} - {job.salary.currency}{job.salary.max.toLocaleString()}/month
-                    </span>
+                    <span>{job.salary}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -156,10 +203,12 @@ export function TeacherJobDetails() {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <Badge variant="outline">{job.department}</Badge>
-                  <Badge variant="outline">
-                    Deadline: {new Date(job.deadline).toLocaleDateString()}
-                  </Badge>
+                  {job.department && <Badge variant="outline">{job.department}</Badge>}
+                  {job.deadline && (
+                    <Badge variant="outline">
+                      Deadline: {new Date(job.deadline).toLocaleDateString()}
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -175,55 +224,42 @@ export function TeacherJobDetails() {
             </Card>
 
             {/* Requirements */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.requirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Responsibilities */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Responsibilities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.responsibilities.map((resp, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <span>{resp}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {job.requirements && job.requirements.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {job.requirements.map((req, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Benefits */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Benefits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
-                      <span>{benefit}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {job.benefits && job.benefits.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Benefits</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {job.benefits.map((benefit, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <CheckCircle className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                        <span>{benefit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -242,22 +278,22 @@ export function TeacherJobDetails() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-sm space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Applicants:</span>
-                      <span className="font-semibold">{job.applicants || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Posted:</span>
-                      <span className="font-semibold">
-                        {new Date(job.postedDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Deadline:</span>
-                      <span className="font-semibold text-red-500">
-                        {new Date(job.deadline).toLocaleDateString()}
-                      </span>
-                    </div>
+                    {job.postedDate && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Posted:</span>
+                        <span className="font-semibold">
+                          {new Date(job.postedDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    {job.deadline && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Deadline:</span>
+                        <span className="font-semibold text-red-500">
+                          {new Date(job.deadline).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <Button 
@@ -283,30 +319,9 @@ export function TeacherJobDetails() {
                 <CardTitle>Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground mt-1" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">Email</p>
-                    <a 
-                      href={`mailto:${job.instituteEmail}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {job.instituteEmail}
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground mt-1" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">Phone</p>
-                    <a 
-                      href={`tel:${job.institutePhone}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {job.institutePhone}
-                    </a>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Contact details will be available after your application is reviewed.
+                </p>
               </CardContent>
             </Card>
 
@@ -323,7 +338,7 @@ export function TeacherJobDetails() {
             <DialogHeader>
               <DialogTitle>Apply for {job.title}</DialogTitle>
               <DialogDescription>
-                Submit your application to {job.instituteName}
+                Submit your application to {job.institute}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">

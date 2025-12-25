@@ -1,36 +1,38 @@
-import { simulateDelay } from '../config';
-import { MockDatabase } from '../mockData';
-import { ApiResponse, VehicleStats, Vehicle, ApprovalRequest, PriorityToggleRequest } from '../types';
+import { apiClient } from '@/lib/apiClient';
+import { ApiResponse, Vehicle, ApprovalRequest, PriorityToggleRequest } from '../types';
 
-const db = MockDatabase.getInstance();
+interface VehicleStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  priority: number;
+}
+
+interface AdminDashboardStats {
+  vehicles: VehicleStats;
+  users: number;
+  jobs: number;
+  suppliers: number;
+}
 
 export const adminService = {
   /**
    * Get dashboard statistics
    */
-  async getStats(): Promise<ApiResponse<VehicleStats>> {
-    await simulateDelay();
-
+  async getStats(): Promise<ApiResponse<AdminDashboardStats>> {
     try {
-      const allVehicles = db.getAllVehicles();
-
-      const stats: VehicleStats = {
-        total: allVehicles.length,
-        pending: allVehicles.filter(v => v.status === 'pending').length,
-        approved: allVehicles.filter(v => v.status === 'approved').length,
-        rejected: allVehicles.filter(v => v.status === 'rejected').length,
-        priorityListings: allVehicles.filter(v => v.isPriority).length,
-      };
+      const data = await apiClient.get<AdminDashboardStats>('/admin/stats', { requiresAuth: true });
 
       return {
         success: true,
-        data: stats,
+        data,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       throw {
         success: false,
-        error: 'Failed to fetch statistics',
+        error: error.message || 'Failed to fetch statistics',
         timestamp: new Date().toISOString(),
       };
     }
@@ -40,20 +42,18 @@ export const adminService = {
    * Get all pending approvals
    */
   async getPendingApprovals(): Promise<ApiResponse<Vehicle[]>> {
-    await simulateDelay();
-
     try {
-      const pendingVehicles = db.getVehiclesByFilter({ status: 'pending' });
+      const vehicles = await apiClient.get<Vehicle[]>('/admin/pending', { requiresAuth: true });
 
       return {
         success: true,
-        data: pendingVehicles,
+        data: vehicles,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       throw {
         success: false,
-        error: 'Failed to fetch pending approvals',
+        error: error.message || 'Failed to fetch pending approvals',
         timestamp: new Date().toISOString(),
       };
     }
@@ -63,33 +63,24 @@ export const adminService = {
    * Approve or reject a vehicle
    */
   async updateApprovalStatus(request: ApprovalRequest): Promise<ApiResponse<Vehicle>> {
-    await simulateDelay();
-
     try {
-      const { vehicleId, status } = request;
+      const { vehicleId, status, reason } = request;
 
-      let updatedVehicle: Vehicle | null;
-
-      if (status === 'approved') {
-        updatedVehicle = db.approveVehicle(vehicleId);
-      } else {
-        updatedVehicle = db.rejectVehicle(vehicleId);
-      }
-
-      if (!updatedVehicle) {
-        throw new Error('Vehicle not found');
-      }
+      const vehicle = await apiClient.put<Vehicle>(`/admin/approve/${vehicleId}`, { 
+        status,
+        reason 
+      }, { requiresAuth: true });
 
       return {
         success: true,
-        data: updatedVehicle,
+        data: vehicle,
         message: `Vehicle ${status} successfully`,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       throw {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to update approval status',
+        error: error.message || 'Failed to update approval status',
         timestamp: new Date().toISOString(),
       };
     }
@@ -99,27 +90,23 @@ export const adminService = {
    * Toggle priority status
    */
   async togglePriority(request: PriorityToggleRequest): Promise<ApiResponse<Vehicle>> {
-    await simulateDelay();
-
     try {
       const { vehicleId, isPriority } = request;
 
-      const updatedVehicle = db.togglePriority(vehicleId, isPriority);
-
-      if (!updatedVehicle) {
-        throw new Error('Vehicle not found');
-      }
+      const vehicle = await apiClient.put<Vehicle>(`/admin/priority/${vehicleId}`, { 
+        isPriority 
+      }, { requiresAuth: true });
 
       return {
         success: true,
-        data: updatedVehicle,
+        data: vehicle,
         message: `Priority ${isPriority ? 'enabled' : 'disabled'} successfully`,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       throw {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to toggle priority',
+        error: error.message || 'Failed to toggle priority',
         timestamp: new Date().toISOString(),
       };
     }
@@ -129,20 +116,63 @@ export const adminService = {
    * Get all vehicles (admin view)
    */
   async getAllVehicles(): Promise<ApiResponse<Vehicle[]>> {
-    await simulateDelay();
-
     try {
-      const allVehicles = db.getAllVehicles();
+      const vehicles = await apiClient.get<Vehicle[]>('/vehicles?status=all', { requiresAuth: true });
 
       return {
         success: true,
-        data: allVehicles,
+        data: vehicles,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
       throw {
         success: false,
-        error: 'Failed to fetch vehicles',
+        error: error.message || 'Failed to fetch vehicles',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
+   * Get all users
+   */
+  async getAllUsers(): Promise<ApiResponse<any[]>> {
+    try {
+      const users = await apiClient.get<any[]>('/admin/users', { requiresAuth: true });
+
+      return {
+        success: true,
+        data: users,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw {
+        success: false,
+        error: error.message || 'Failed to fetch users',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
+   * Update user status
+   */
+  async updateUserStatus(userId: string, isActive: boolean): Promise<ApiResponse<any>> {
+    try {
+      const user = await apiClient.put<any>(`/admin/users/${userId}/status`, { 
+        isActive 
+      }, { requiresAuth: true });
+
+      return {
+        success: true,
+        data: user,
+        message: `User ${isActive ? 'activated' : 'suspended'} successfully`,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw {
+        success: false,
+        error: error.message || 'Failed to update user status',
         timestamp: new Date().toISOString(),
       };
     }

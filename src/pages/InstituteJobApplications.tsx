@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mockJobs } from '@/mock/jobData';
-import { getJobApplications, mockTeachers } from '@/mock/teacherData';
+import { api } from '@/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +44,9 @@ export function InstituteJobApplications() {
   const { user } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [job, setJob] = useState<any>(null);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [interviewData, setInterviewData] = useState({
     date: '',
     time: '',
@@ -55,16 +57,41 @@ export function InstituteJobApplications() {
     notes: '',
   });
 
-  const job = mockJobs.find(j => j.id === jobId);
-  const applications = jobId ? getJobApplications(jobId) : [];
+  useEffect(() => {
+    loadData();
+  }, [jobId]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Load job details
+      const jobResponse = await api.jobs.getJobById(jobId!);
+      setJob(jobResponse.data);
+      
+      // Load applications
+      const appsResponse = await api.jobs.getApplications({ jobId });
+      setApplications(appsResponse.data);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      toast.error('Failed to load applications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getApplicationsByStatus = (status: string) => {
     return applications.filter(app => app.status === status);
   };
 
-  const handleStatusChange = (applicationId: string, newStatus: string) => {
-    toast.success(`Application ${newStatus} successfully`);
-    // Mock status update
+  const handleStatusChange = async (applicationId: string, newStatus: string) => {
+    try {
+      await api.jobs.updateApplicationStatus(applicationId, { status: newStatus });
+      toast.success(`Application ${newStatus} successfully`);
+      loadData(); // Reload data
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update application status');
+    }
   };
 
   const handleScheduleInterview = (application: any) => {
@@ -72,7 +99,7 @@ export function InstituteJobApplications() {
     setShowScheduleDialog(true);
   };
 
-  const submitScheduleInterview = () => {
+  const submitScheduleInterview = async () => {
     if (!interviewData.date || !interviewData.time) {
       toast.error('Please fill in all required fields');
       return;
@@ -88,22 +115,44 @@ export function InstituteJobApplications() {
       return;
     }
 
-    toast.success('Interview scheduled successfully!');
-    setShowScheduleDialog(false);
-    setInterviewData({
-      date: '',
-      time: '',
-      duration: '60',
-      mode: 'video',
-      location: '',
-      meetingLink: '',
-      notes: '',
-    });
+    try {
+      await api.jobs.updateApplicationStatus(selectedApplication.id, {
+        interviewScheduled: {
+          scheduledDate: interviewData.date,
+          scheduledTime: interviewData.time,
+          duration: interviewData.duration,
+          mode: interviewData.mode,
+          location: interviewData.location,
+          meetingLink: interviewData.meetingLink,
+          notes: interviewData.notes,
+        }
+      });
+
+      toast.success('Interview scheduled successfully!');
+      setShowScheduleDialog(false);
+      setInterviewData({
+        date: '',
+        time: '',
+        duration: '60',
+        mode: 'video',
+        location: '',
+        meetingLink: '',
+        notes: '',
+      });
+      loadData(); // Reload data
+    } catch (error) {
+      console.error('Failed to schedule interview:', error);
+      toast.error('Failed to schedule interview');
+    }
   };
 
-  const getTeacherDetails = (teacherId: string) => {
-    return mockTeachers.find(t => t.id === teacherId);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -168,7 +217,6 @@ export function InstituteJobApplications() {
               applications={applications} 
               onStatusChange={handleStatusChange}
               onScheduleInterview={handleScheduleInterview}
-              getTeacherDetails={getTeacherDetails}
             />
           </TabsContent>
 
@@ -177,7 +225,6 @@ export function InstituteJobApplications() {
               applications={getApplicationsByStatus('pending')} 
               onStatusChange={handleStatusChange}
               onScheduleInterview={handleScheduleInterview}
-              getTeacherDetails={getTeacherDetails}
             />
           </TabsContent>
 
@@ -186,7 +233,6 @@ export function InstituteJobApplications() {
               applications={getApplicationsByStatus('reviewed')} 
               onStatusChange={handleStatusChange}
               onScheduleInterview={handleScheduleInterview}
-              getTeacherDetails={getTeacherDetails}
             />
           </TabsContent>
 
@@ -195,7 +241,6 @@ export function InstituteJobApplications() {
               applications={getApplicationsByStatus('shortlisted')} 
               onStatusChange={handleStatusChange}
               onScheduleInterview={handleScheduleInterview}
-              getTeacherDetails={getTeacherDetails}
             />
           </TabsContent>
         </Tabs>
@@ -319,8 +364,7 @@ export function InstituteJobApplications() {
 function ApplicationsList({ 
   applications, 
   onStatusChange, 
-  onScheduleInterview,
-  getTeacherDetails 
+  onScheduleInterview
 }: any) {
   if (applications.length === 0) {
     return (
@@ -335,10 +379,10 @@ function ApplicationsList({
   return (
     <div className="space-y-4">
       {applications.map((application: any) => {
-        const teacher = getTeacherDetails(application.teacherId);
+        const teacher = application.teacherId; // Already populated from API
         
         return (
-          <Card key={application.id}>
+          <Card key={application._id || application.id}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
@@ -374,42 +418,46 @@ function ApplicationsList({
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{teacher.phone}</span>
+                    <span>{teacher.phone || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{teacher.location}</span>
+                    <span>{teacher.location || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <span>{teacher.experience} years exp</span>
+                    <span>{teacher.experience || 0} years exp</span>
                   </div>
                 </div>
               )}
 
               {/* Qualifications & Subjects */}
-              {teacher && (
+              {teacher && (teacher.qualifications?.length > 0 || teacher.subjects?.length > 0) && (
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Award className="h-4 w-4 text-muted-foreground mt-1" />
-                    <div className="flex flex-wrap gap-1">
-                      {teacher.qualifications.map((qual: string) => (
-                        <Badge key={qual} variant="secondary" className="text-xs">
-                          {qual}
-                        </Badge>
-                      ))}
+                  {teacher.qualifications?.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Award className="h-4 w-4 text-muted-foreground mt-1" />
+                      <div className="flex flex-wrap gap-1">
+                        {teacher.qualifications.map((qual: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {qual}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <BookOpen className="h-4 w-4 text-muted-foreground mt-1" />
-                    <div className="flex flex-wrap gap-1">
-                      {teacher.subjects.map((subj: string) => (
-                        <Badge key={subj} variant="outline" className="text-xs">
-                          {subj}
-                        </Badge>
-                      ))}
+                  )}
+                  {teacher.subjects?.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground mt-1" />
+                      <div className="flex flex-wrap gap-1">
+                        {teacher.subjects.map((subj: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {subj}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -443,7 +491,7 @@ function ApplicationsList({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onStatusChange(application.id, 'reviewed')}
+                  onClick={() => onStatusChange(application._id || application.id, 'reviewed')}
                   disabled={application.status === 'reviewed'}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -452,7 +500,7 @@ function ApplicationsList({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onStatusChange(application.id, 'shortlisted')}
+                  onClick={() => onStatusChange(application._id || application.id, 'shortlisted')}
                   disabled={application.status === 'shortlisted'}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -469,7 +517,7 @@ function ApplicationsList({
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => onStatusChange(application.id, 'rejected')}
+                  onClick={() => onStatusChange(application._id || application.id, 'rejected')}
                   disabled={application.status === 'rejected'}
                 >
                   <XCircle className="h-4 w-4 mr-2" />

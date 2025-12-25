@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Landing } from '@/pages/Landing';
@@ -42,11 +43,12 @@ import AdRequests from '@/pages/admin/ads/AdRequests';
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          <AdProvider>
-            <Toaster position="top-right" />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <NotificationProvider>
+            <AdProvider>
+              <Toaster position="top-right" />
           <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-grow">
@@ -141,6 +143,7 @@ function App() {
         </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

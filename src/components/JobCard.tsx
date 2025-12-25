@@ -1,4 +1,4 @@
-import { Job } from '@/mock/jobData';
+import { Job } from '@/api/services/jobService';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PriorityBadge } from '@/components/PriorityBadge';

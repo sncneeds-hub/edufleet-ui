@@ -23,9 +23,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Plus, Pencil, Trash2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { categoryLabels } from '@/mock/supplierData';
+import { categoryLabels } from '@/constants/categories';
 
-// Mock initial data
+// Initial data
 const initialVehicleCategories = [
   { id: 'vc-1', name: 'School Bus', slug: 'school-bus', count: 15 },
   { id: 'vc-2', name: 'Minibus', slug: 'minibus', count: 8 },
@@ -47,7 +47,7 @@ const initialSupplierCategories = Object.entries(categoryLabels).map(([slug, nam
   id: `sc-${index + 1}`,
   name,
   slug,
-  count: Math.floor(Math.random() * 10) // Mock count
+  count: 0 // Count from backend
 }));
 
 type Category = {

@@ -17,12 +17,5 @@ export default defineConfig({
     hmr: {
       overlay: false, // Disable Vite's built-in error overlay (we use our own ErrorOverlay)
     },
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   }
 });

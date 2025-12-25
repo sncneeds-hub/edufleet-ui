@@ -57,12 +57,14 @@ export interface SubscriptionUsageStats {
     allowed: number;
     remaining: number;
     percentage: number;
+    limitReached?: boolean;
   };
   listingCount: {
     used: number;
     allowed: number;
     remaining: number;
     percentage: number;
+    limitReached?: boolean;
   };
   daysRemaining: number;
   isExpiringSoon: boolean; // Less than 7 days
@@ -180,8 +182,11 @@ export interface SubscriptionPlanStats {
 export interface SubscriptionFilters {
   status?: UserSubscription['status'];
   planId?: string;
+  search?: string; // Search by user name/email
   searchTerm?: string; // Search by user name/email
   expiringWithinDays?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
 }

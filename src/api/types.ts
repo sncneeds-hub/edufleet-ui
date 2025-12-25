@@ -68,10 +68,14 @@ export interface VehicleFilters {
   type?: string;
   manufacturer?: string;
   year?: number;
+  minYear?: number;
+  maxYear?: number;
   condition?: string;
   status?: 'pending' | 'approved' | 'rejected';
   isPriority?: boolean;
   sellerId?: string;
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   pageSize?: number;
 }

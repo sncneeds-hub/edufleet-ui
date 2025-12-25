@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockJobs } from '@/mock/jobData';
+import { jobService } from '@/api/services/jobService';
+import type { Job } from '@/api/services/jobService';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,26 +15,38 @@ import {
 } from '@/components/ui/select';
 import { Search, MapPin, Briefcase, DollarSign, Calendar, Building } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { toast } from 'sonner';
 
 export function TeacherJobBrowse() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter only approved jobs
-  const approvedJobs = mockJobs.filter(job => job.status === 'approved');
+  useEffect(() => {
+    loadJobs();
+  }, [searchTerm, typeFilter, locationFilter]);
 
-  const filteredJobs = approvedJobs.filter((job) => {
-    const matchesSearch = 
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.instituteName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = typeFilter === 'all' || job.type === typeFilter;
-    const matchesLocation = locationFilter === 'all' || job.location.includes(locationFilter);
+  const loadJobs = async () => {
+    try {
+      setLoading(true);
+      const response = await jobService.getJobs({
+        searchTerm: searchTerm || undefined,
+        type: typeFilter !== 'all' ? typeFilter as any : undefined,
+        location: locationFilter !== 'all' ? locationFilter : undefined,
+        status: 'open'
+      });
+      setJobs(response.data.items);
+    } catch (error) {
+      toast.error('Failed to load jobs');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return matchesSearch && matchesType && matchesLocation;
-  });
+  const filteredJobs = jobs;
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -114,7 +127,7 @@ export function TeacherJobBrowse() {
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-muted-foreground">
-            Showing {filteredJobs.length} of {approvedJobs.length} jobs
+            {loading ? 'Loading...' : `Showing ${filteredJobs.length} jobs`}
           </p>
           <Button variant="outline" onClick={() => {
             setSearchTerm('');
@@ -132,7 +145,13 @@ export function TeacherJobBrowse() {
 
         {/* Job Listings */}
         <div className="grid grid-cols-1 gap-6">
-          {filteredJobs.length === 0 ? (
+          {loading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading jobs...</p>
+              </CardContent>
+            </Card>
+          ) : filteredJobs.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
@@ -153,14 +172,9 @@ export function TeacherJobBrowse() {
                           </CardTitle>
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Building className="h-4 w-4" />
-                            <span className="font-semibold">{job.instituteName}</span>
+                            <span className="font-semibold">{job.institute}</span>
                           </div>
                         </div>
-                        {job.isPriority && (
-                          <Badge className="bg-amber-500 text-white">
-                            Priority
-                          </Badge>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -181,9 +195,7 @@ export function TeacherJobBrowse() {
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {job.salary.currency}{job.salary.min.toLocaleString()} - {job.salary.currency}{job.salary.max.toLocaleString()}
-                        </span>
+                        <span>{job.salary}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -198,20 +210,17 @@ export function TeacherJobBrowse() {
 
                     {/* Department and Deadline */}
                     <div className="flex items-center gap-4 text-sm">
-                      <Badge variant="outline">{job.department}</Badge>
-                      <span className="text-muted-foreground">
-                        Deadline: {new Date(job.deadline).toLocaleDateString()}
-                      </span>
-                      {job.applicants && (
+                      {job.department && <Badge variant="outline">{job.department}</Badge>}
+                      {job.deadline && (
                         <span className="text-muted-foreground">
-                          {job.applicants} applicants
+                          Deadline: {new Date(job.deadline).toLocaleDateString()}
                         </span>
                       )}
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 pt-2">
-                      <Link to={`/job/${job.id}`} className="flex-1">
+                      <Link to={`/job/${job.id || job._id}`} className="flex-1">
                         <Button className="w-full">View Details & Apply</Button>
                       </Link>
                     </div>

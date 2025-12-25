@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { mockTeachers } from '@/mock/teacherData';
+import { useState, useMemo } from 'react';
+import { useTeachers } from '@/hooks/useApi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,32 +48,38 @@ export function TeacherSearch() {
     message: '',
   });
 
-  const filteredTeachers = mockTeachers.filter((teacher) => {
-    const matchesSearch = 
-      teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.subjects.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      teacher.qualifications.some(q => q.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesSubject = subjectFilter === 'all' || teacher.subjects.some(s => 
-      s.toLowerCase().includes(subjectFilter.toLowerCase())
-    );
-    
-    const matchesLocation = locationFilter === 'all' || teacher.location.includes(locationFilter);
-    
-    const matchesExperience = 
-      experienceFilter === 'all' ||
-      (experienceFilter === '0-2' && teacher.experience <= 2) ||
-      (experienceFilter === '3-5' && teacher.experience >= 3 && teacher.experience <= 5) ||
-      (experienceFilter === '6-10' && teacher.experience >= 6 && teacher.experience <= 10) ||
-      (experienceFilter === '10+' && teacher.experience > 10);
-    
-    const matchesAvailability = 
-      availabilityFilter === 'all' || 
-      (availabilityFilter === 'available' && teacher.isAvailable) ||
-      (availabilityFilter === 'unavailable' && !teacher.isAvailable);
+  // Fetch teachers from API
+  const { teachers: allTeachers, loading } = useTeachers();
 
-    return matchesSearch && matchesSubject && matchesLocation && matchesExperience && matchesAvailability;
-  });
+  // Client-side filtering
+  const filteredTeachers = useMemo(() => {
+    return allTeachers.filter((teacher) => {
+      const matchesSearch = 
+        teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.subjects.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        teacher.qualifications.some(q => q.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesSubject = subjectFilter === 'all' || teacher.subjects.some(s => 
+        s.toLowerCase().includes(subjectFilter.toLowerCase())
+      );
+      
+      const matchesLocation = locationFilter === 'all' || teacher.location.includes(locationFilter);
+      
+      const matchesExperience = 
+        experienceFilter === 'all' ||
+        (experienceFilter === '0-2' && teacher.experience <= 2) ||
+        (experienceFilter === '3-5' && teacher.experience >= 3 && teacher.experience <= 5) ||
+        (experienceFilter === '6-10' && teacher.experience >= 6 && teacher.experience <= 10) ||
+        (experienceFilter === '10+' && teacher.experience > 10);
+      
+      const matchesAvailability = 
+        availabilityFilter === 'all' || 
+        (availabilityFilter === 'available' && teacher.isAvailable) ||
+        (availabilityFilter === 'unavailable' && !teacher.isAvailable);
+
+      return matchesSearch && matchesSubject && matchesLocation && matchesExperience && matchesAvailability;
+    });
+  }, [allTeachers, searchTerm, subjectFilter, locationFilter, experienceFilter, availabilityFilter]);
 
   const handleContact = (teacher: any) => {
     setSelectedTeacher(teacher);
@@ -197,13 +203,19 @@ export function TeacherSearch() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            Showing {filteredTeachers.length} of {mockTeachers.length} teachers
+            {loading ? 'Loading teachers...' : `Showing ${filteredTeachers.length} of ${allTeachers.length} teachers`}
           </p>
         </div>
 
         {/* Teacher Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTeachers.length === 0 ? (
+          {loading ? (
+            <Card className="col-span-full">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading teachers...</p>
+              </CardContent>
+            </Card>
+          ) : filteredTeachers.length === 0 ? (
             <Card className="col-span-full">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">

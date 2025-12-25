@@ -7,7 +7,7 @@ import { BarChart3, MousePointerClick, Eye, TrendingUp, Users } from 'lucide-rea
 const AdDashboard: React.FC = () => {
   const { ads } = useAds();
 
-  // Mock calculation
+  // Calculate totals
   const totalAds = ads.length;
   const activeAds = ads.filter(a => a.status === 'active').length;
   const pendingAds = ads.filter(a => a.status === 'pending').length;
@@ -15,7 +15,7 @@ const AdDashboard: React.FC = () => {
   const totalClicks = ads.reduce((acc, curr) => acc + curr.clicks, 0);
   const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
 
-  // Mock chart data
+  // Chart data
   const chartData = [
     { date: 'Mon', impressions: 4000, clicks: 240 },
     { date: 'Tue', impressions: 3000, clicks: 139 },

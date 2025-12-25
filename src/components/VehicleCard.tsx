@@ -1,4 +1,4 @@
-import { Vehicle } from '@/mock/vehicleData';
+import { Vehicle } from '@/api/services/vehicleService';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PriorityBadge } from '@/components/PriorityBadge';
@@ -26,77 +26,90 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
       onClick={handleClick}
       className="cursor-pointer relative group flex-shrink-0 w-full h-full"
     >
-      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-xl w-full h-full flex flex-col p-0 bg-card group-hover:border-primary/20">
+      <Card className="overflow-hidden border border-border/40 shadow-card hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 transition-all duration-300 rounded-xl w-full h-full flex flex-col p-0 bg-card">
         {/* Image Container */}
-        <div className="relative overflow-hidden bg-muted aspect-[4/3] flex-shrink-0">
+        <div className="relative overflow-hidden bg-muted/50 aspect-[4/3] flex-shrink-0">
           {!isUnmasked && !isListing ? (
             <MaskedContent variant="image" label="Login to view" className="w-full h-full">
               <img
                 src={vehicle.images[0]}
                 alt={vehicle.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
               />
             </MaskedContent>
           ) : (
             <img
               src={vehicle.images[0]}
               alt={vehicle.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
             />
           )}
           
+          {/* Gradient Overlay for better text visibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
           {vehicle.isPriority && (
-            <div className="absolute top-1 left-1 z-10 scale-75 origin-top-left pointer-events-none">
+            <div className="absolute top-2 left-2 z-10">
               <PriorityBadge />
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col flex-grow justify-between gap-3">
-          <div className="min-h-0">
-            <h3 className="font-bold text-base leading-tight line-clamp-2 text-foreground mb-1 group-hover:text-primary transition-colors" title={vehicle.title}>
+        <div className="p-5 flex flex-col flex-grow justify-between gap-3">
+          <div className="min-h-0 space-y-2">
+            <h3 className="font-bold text-base leading-tight line-clamp-2 text-foreground group-hover:text-primary transition-colors" title={vehicle.title}>
               {vehicle.title}
             </h3>
-            <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-              <span className="font-medium">{vehicle.manufacturer}</span>
-              <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/70">{vehicle.manufacturer}</span>
+              <span className="w-1 h-1 rounded-full bg-border"></span>
               <span>{vehicle.year}</span>
-            </p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-            <div className="min-w-0">
-              {isUnmasked || isListing ? (
-                <div className="text-lg font-bold text-primary truncate">
-                  ₹{(vehicle.price / 100000).toFixed(2)} Lakh
-                </div>
-              ) : (
-                <MaskedContent 
-                  variant="text" 
-                  label="Login to view price" 
-                  className="text-xs font-semibold text-primary/80"
-                >
-                  ₹{(vehicle.price / 100000).toFixed(2)} Lakh
-                </MaskedContent>
-              )}
+          <div className="space-y-3 mt-auto pt-3 border-t border-border/40">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                {isUnmasked || isListing ? (
+                  <div className="text-xl font-bold text-primary truncate">
+                    ₹{(vehicle.price / 100000).toFixed(2)} L
+                  </div>
+                ) : (
+                  <MaskedContent 
+                    variant="text" 
+                    label="Login to view price" 
+                    className="text-xs font-semibold text-primary/70"
+                  >
+                    ₹{(vehicle.price / 100000).toFixed(2)} L
+                  </MaskedContent>
+                )}
+              </div>
+              
+              <div className="flex gap-2 flex-shrink-0">
+                <span className="text-xs bg-secondary/10 text-secondary px-2.5 py-1 rounded-md font-semibold border border-secondary/20">
+                  {vehicle.type === 'bus' ? 'Bus' : vehicle.type === 'van' ? 'Van' : 'Car'}
+                </span>
+              </div>
             </div>
             
-            <div className="flex gap-2 flex-shrink-0">
-              <span className="text-xs bg-secondary/5 text-secondary px-2 py-1 rounded-md font-medium border border-secondary/10">
-                {vehicle.type === 'bus' ? 'Bus' : vehicle.type === 'van' ? 'Van' : 'Car'}
-              </span>
+            {/* Professional Call to Action Buttons */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-xs h-9 font-semibold border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+              >
+                View Details
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="w-full text-xs h-9 font-semibold bg-accent hover:bg-accent-light text-accent-foreground border-none shadow-sm hover:shadow-md transition-all"
+              >
+                Enquire Now
+              </Button>
             </div>
-          </div>
-          
-          {/* Call to Action Placeholder - Justdial Style */}
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            <Button variant="outline" size="sm" className="w-full text-xs h-8 border-primary text-primary hover:bg-primary hover:text-white">
-              View Details
-            </Button>
-            <Button variant="default" size="sm" className="w-full text-xs h-8 bg-accent hover:bg-accent/90 text-white border-none shadow-sm">
-              Enquire
-            </Button>
           </div>
         </div>
       </Card>

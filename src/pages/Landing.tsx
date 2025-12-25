@@ -25,7 +25,7 @@ export function Landing() {
   const [suppliersLoading, setSuppliersLoading] = useState(true);
 
   // Search state
-  const [location, setLocation] = useState('Mumbai'); // Mock default
+  const [location, setLocation] = useState('Mumbai');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch featured jobs and suppliers on mount
@@ -80,39 +80,46 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-background font-sans">
       
-      {/* Hero Section - Enhanced Modern Design */}
-      <section className="relative pt-24 pb-36 md:pt-40 md:pb-56 bg-gradient-primary overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]"></div>
-          <div className="absolute top-0 -left-4 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 -right-4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      {/* Hero Section - Professional Premium Design */}
+      <section className="relative pt-28 pb-40 md:pt-44 md:pb-60 bg-gradient-hero overflow-hidden">
+        {/* Premium Background Elements */}
+        <div className="absolute inset-0 opacity-[0.07]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#ffffff_0.5px,transparent_0.5px)] [background-size:24px_24px]"></div>
+        </div>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute top-10 -left-20 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] animate-float"></div>
+          <div className="absolute bottom-10 -right-20 w-[600px] h-[600px] bg-accent/15 rounded-full blur-[140px] animate-float delay-1000"></div>
         </div>
         
-        <div className="container relative z-10 mx-auto px-4 text-center">
-          {/* Trust Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-8 animate-in-fade">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-white/90 text-sm font-medium">Trusted by 5,000+ Educational Institutes</span>
+        <div className="container relative z-10 mx-auto px-4 lg:px-6 text-center">
+          {/* Premium Trust Badge */}
+          <div className="inline-flex items-center gap-2.5 bg-white/15 backdrop-blur-md border border-white/25 rounded-full px-6 py-2.5 mb-10 animate-in-fade shadow-lg">
+            <div className="w-2 h-2 bg-success rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+            <span className="text-white/95 text-sm font-semibold">Trusted by 5,000+ Educational Institutes</span>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight drop-shadow-2xl font-display animate-in-slide-up leading-tight">
-            India's Leading <span className="text-accent">Education</span>
-            <br className="hidden md:block" />
-            <span className="text-gradient bg-gradient-to-r from-white to-white/70 bg-clip-text">Marketplace</span>
+          {/* Professional Main Headline */}
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold text-white mb-7 tracking-tight leading-[1.1] animate-in-slide-up">
+            India's Leading
+            <br className="md:hidden" />
+            <span className="text-accent"> Education </span>
+            <br />
+            <span className="relative inline-block">
+              Marketplace
+              <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-accent via-accent-light to-transparent rounded-full"></span>
+            </span>
           </h1>
           
-          <p className="text-white/90 mb-12 text-lg md:text-xl max-w-3xl mx-auto font-medium leading-relaxed animate-in-slide-up delay-100">
+          <p className="text-white/90 mb-14 text-lg md:text-xl lg:text-2xl max-w-4xl mx-auto font-medium leading-relaxed animate-in-slide-up delay-100">
             Connect with <span className="font-bold text-white">Vehicles</span>, <span className="font-bold text-white">Jobs</span>, <span className="font-bold text-white">Suppliers</span> & <span className="font-bold text-white">Teachers</span>
             <br className="hidden md:block" />
-            All in One Platform for Educational Institutes
+            <span className="text-white/80">All in One Platform for Educational Institutes</span>
           </p>
 
-          {/* Enhanced Search Box with Animation */}
-          <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-[0_20px_70px_rgba(0,0,0,0.3)] p-3 flex flex-col md:flex-row gap-2 md:gap-0 md:divide-x divide-gray-200 animate-in-scale delay-200 hover:shadow-[0_25px_90px_rgba(0,0,0,0.35)] transition-all duration-300">
+          {/* Professional Search Box */}
+          <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-2.5 flex flex-col md:flex-row gap-2 animate-in-scale delay-200 hover:shadow-[0_30px_90px_rgba(0,0,0,0.25)] transition-all duration-300 border border-gray-100">
             {/* Location Input */}
-            <div className="relative md:w-[30%]">
+            <div className="relative md:w-[28%]">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                 <MapPin className="w-5 h-5" />
               </div>
@@ -120,10 +127,13 @@ export function Landing() {
                 type="text" 
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 outline-none text-gray-700 font-medium bg-transparent placeholder:text-gray-400 rounded-xl focus:bg-gray-50/50 transition-colors"
+                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-medium bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/30 transition-colors"
                 placeholder="Mumbai, India"
               />
             </div>
+            
+            {/* Vertical Divider */}
+            <div className="hidden md:block w-px bg-border self-stretch my-2"></div>
             
             {/* Main Search Input */}
             <div className="relative flex-1">
@@ -135,16 +145,18 @@ export function Landing() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full pl-12 pr-4 py-4 outline-none text-gray-700 font-medium bg-transparent placeholder:text-gray-400 rounded-xl focus:bg-gray-50/50 transition-colors"
+                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-medium bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/30 transition-colors"
                 placeholder="Try: School Bus, Math Teacher, Lab Equipment..."
               />
             </div>
 
             {/* Search Button */}
-            <div className="p-1 md:w-36 flex items-center">
+            <div className="md:w-40 flex items-center">
               <Button 
                 onClick={handleSearch}
-                className="w-full h-full bg-accent hover:bg-accent/90 text-white font-bold text-base md:text-lg rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 min-h-[52px]"
+                variant="accent"
+                size="lg"
+                className="w-full font-bold text-base rounded-xl flex items-center justify-center gap-2 min-h-[56px]"
               >
                 Search
                 <ArrowRight className="w-5 h-5" />
@@ -152,9 +164,9 @@ export function Landing() {
             </div>
           </div>
 
-          {/* Popular Searches */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 animate-in-fade delay-300">
-            <span className="text-white/70 text-sm font-medium">Popular:</span>
+          {/* Professional Popular Searches */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 animate-in-fade delay-300">
+            <span className="text-white/80 text-sm font-semibold">Popular:</span>
             {['School Buses', 'Teaching Jobs', 'Lab Suppliers', 'Textbooks'].map((term, idx) => (
               <button
                 key={idx}
@@ -162,18 +174,18 @@ export function Landing() {
                   setSearchQuery(term);
                   handleSearch();
                 }}
-                className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-white text-sm font-medium transition-all duration-200 hover:scale-105"
+                className="px-5 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/30 rounded-full text-white text-sm font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg"
               >
                 {term}
               </button>
             ))}
           </div>
 
-          {/* Quick Links Grid - Enhanced Floating Card */}
-          <div className="max-w-6xl mx-auto mt-20 md:mt-24 animate-in-slide-up delay-400">
-            <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-gray-100 p-8 md:p-10 relative hover:shadow-[0_25px_80px_rgba(0,0,0,0.2)] transition-all duration-300">
-              <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-secondary px-8 py-3 rounded-full shadow-lg text-sm font-bold text-white tracking-wide uppercase">
-                Explore Everything
+          {/* Professional Quick Links Card */}
+          <div className="max-w-6xl mx-auto mt-24 md:mt-28 animate-in-slide-up delay-400">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-10 md:p-12 relative hover:shadow-[0_30px_100px_rgba(0,0,0,0.2)] transition-all duration-300">
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary via-primary-light to-secondary px-10 py-3.5 rounded-full shadow-xl">
+                <span className="text-sm font-bold text-white tracking-wide uppercase">Explore Everything</span>
               </div>
               <div className="grid grid-cols-4 md:grid-cols-8 gap-y-10 gap-x-4 md:gap-x-6">
                 {quickLinks.map((link, idx) => (

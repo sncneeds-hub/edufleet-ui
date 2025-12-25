@@ -1,104 +1,58 @@
-import { simulateDelay } from '../config';
+// NOTE: Subscription features are temporarily disabled - backend implementation required
+// import { apiClient } from '@/lib/apiClient';
 import {
   BrowseCheckResult,
   ListingCheckResult,
   VisibilityCheckResult,
   ApiResponse,
 } from '../types';
-import {
-  getUserSubscription,
-  getSubscriptionPlan,
-  getDaysRemaining,
-  DEFAULT_FREE_PLAN,
-} from '../../mock/subscriptionData';
-import { mockUserSubscriptions } from '../../mock/subscriptionData';
+
+// ==========================================
+// HELPER FUNCTIONS (STUBS)
+// ==========================================
+
+const simulateDelay = async (min: number, max: number) => {
+  const delay = Math.random() * (max - min) + min;
+  return new Promise(resolve => setTimeout(resolve, delay));
+};
+
+const getUserSubscription = (userId: string) => {
+  // Stub: Always return null for now
+  return null;
+};
+
+const DEFAULT_FREE_PLAN = {
+  browseLimit: 10,
+  listingLimit: 2,
+  notificationLimit: 5,
+};
+
+const getSubscriptionPlan = (planId: string) => {
+  // Stub: Return default plan
+  return DEFAULT_FREE_PLAN;
+};
+
+const getDaysRemaining = (expiresAt: string) => {
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diff = expiry.getTime() - now.getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
 
 // ==========================================
 // BROWSE LIMIT ENFORCEMENT
 // ==========================================
 
+// STUB: Always allows browsing until backend implements subscription limits
 export const checkBrowseLimit = async (userId: string): Promise<ApiResponse<BrowseCheckResult>> => {
-  await simulateDelay(100, 300); // Faster for checks
-  
-  const subscription = getUserSubscription(userId);
-  
-  // No subscription - use free plan limits
-  if (!subscription) {
-    return {
-      success: true,
-      data: {
-        allowed: false,
-        remaining: DEFAULT_FREE_PLAN.maxBrowseCount,
-        limitReached: true,
-        subscription: null,
-        message: 'No active subscription. Please contact admin to get access.',
-      },
-      timestamp: new Date().toISOString(),
-    };
-  }
-  
-  // Check if subscription is active
-  if (subscription.status !== 'active') {
-    return {
-      success: true,
-      data: {
-        allowed: false,
-        remaining: 0,
-        limitReached: true,
-        subscription,
-        message: `Subscription is ${subscription.status}. Please contact admin.`,
-      },
-      timestamp: new Date().toISOString(),
-    };
-  }
-  
-  // Check if expired
-  const daysRemaining = getDaysRemaining(subscription.endDate);
-  if (daysRemaining < 0) {
-    // Auto-expire the subscription
-    subscription.status = 'expired';
-    return {
-      success: true,
-      data: {
-        allowed: false,
-        remaining: 0,
-        limitReached: true,
-        subscription,
-        message: 'Subscription has expired. Please contact admin to renew.',
-      },
-      timestamp: new Date().toISOString(),
-    };
-  }
-  
-  const plan = getSubscriptionPlan(subscription.subscriptionPlanId);
-  
-  if (!plan) {
-    return {
-      success: true,
-      data: {
-        allowed: false,
-        remaining: 0,
-        limitReached: true,
-        subscription,
-        message: 'Subscription plan not found.',
-      },
-      timestamp: new Date().toISOString(),
-    };
-  }
-  
-  const remaining = plan.maxBrowseCount - subscription.browseCountUsed;
-  const limitReached = remaining <= 0;
-  
   return {
     success: true,
     data: {
-      allowed: !limitReached,
-      remaining: Math.max(0, remaining),
-      limitReached,
-      subscription,
-      message: limitReached 
-        ? 'Browse limit reached for this period. Please contact admin to upgrade.' 
-        : undefined,
+      allowed: true,
+      remaining: 999,
+      limitReached: false,
+      subscription: null,
+      message: 'Browse limit check disabled - backend implementation required',
     },
     timestamp: new Date().toISOString(),
   };

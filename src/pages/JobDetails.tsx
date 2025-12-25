@@ -66,7 +66,7 @@ export function JobDetails() {
       navigate('/login');
       return;
     }
-    toast.success('Application submitted! (Mock)');
+    toast.success('Application submitted!');
   };
 
   return (

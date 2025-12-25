@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Building2, Mail, Phone, Globe, MapPin } from 'lucide-react';
-import { categoryLabels } from '@/mock/supplierData';
+import { categoryLabels } from '@/constants/categories';
 import type { CreateSupplierDto } from '@/api/types';
 
 interface SupplierFormProps {
