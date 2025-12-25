@@ -27,15 +27,14 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
+import { 
   getAllUserSubscriptions,
   getAllSubscriptionPlans,
-  extendSubscription,
+  extendUserSubscription,
   resetBrowseCount,
-  suspendSubscription,
-  reactivateSubscription,
-  continueSubscription,
-  getSubscriptionStats,
+  suspendUserSubscription,
+  reactivateUserSubscription,
+  getGlobalSubscriptionStats,
 } from '@/api/services/subscriptionService';
 import { 
   Users, 

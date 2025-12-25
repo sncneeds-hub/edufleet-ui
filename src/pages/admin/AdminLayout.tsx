@@ -3,25 +3,30 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AdminSidebar } from '@/components/AdminSidebar';
-import { mockVehicles } from '@/mock/vehicleData';
 import { useState, useEffect } from 'react';
 import { getSupplierStats } from '@/api/services/supplierService';
+import { apiClient } from '@/lib/apiClient';
 
 export function AdminLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [supplierStats, setSupplierStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
+  const [pendingVehicles, setPendingVehicles] = useState(0);
 
   useEffect(() => {
-    loadSupplierStats();
+    loadStats();
   }, []);
 
-  const loadSupplierStats = async () => {
+  const loadStats = async () => {
     try {
-      const response = await getSupplierStats();
-      setSupplierStats(response.data);
+      const [supplierResponse, pendingResponse] = await Promise.all([
+        getSupplierStats(),
+        apiClient.get<any[]>('/admin/pending', { requiresAuth: true })
+      ]);
+      setSupplierStats(supplierResponse.data);
+      setPendingVehicles(pendingResponse.length);
     } catch (error) {
-      console.error('Failed to load supplier stats');
+      console.error('Failed to load stats');
     }
   };
 
@@ -34,8 +39,6 @@ export function AdminLayout() {
       </div>
     );
   }
-
-  const pendingVehicles = mockVehicles.filter(v => v.status === 'pending').length;
 
   return (
     <div className="flex h-screen bg-background">

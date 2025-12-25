@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Search, Building2, Filter, Sliders, CheckCircle, Calendar, Users, Award, Mail, Phone, Globe, MapPin } from 'lucide-react';
 import { getSuppliers } from '@/api/services/supplierService';
 import { Supplier, SupplierFilters } from '@/api/types';
-import { categoryLabels } from '@/mock/supplierData';
+import { categoryLabels } from '@/constants/categories';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import {

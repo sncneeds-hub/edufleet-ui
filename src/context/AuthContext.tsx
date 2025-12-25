@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService, User } from '../services/authService';
+import { authService, User } from '@/api/services/authService';
 import { toast } from 'sonner';
 
 export interface TeacherSignupData {

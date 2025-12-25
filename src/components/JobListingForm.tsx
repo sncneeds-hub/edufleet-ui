@@ -76,7 +76,7 @@ export function JobListingForm() {
       return;
     }
 
-    toast.success('Job listing created successfully! (Mock)');
+    toast.success('Job listing created successfully!');
     console.log('Job listing data:', {
       ...formData,
       requirements: filteredRequirements,

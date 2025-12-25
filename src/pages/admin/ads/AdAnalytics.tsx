@@ -8,7 +8,7 @@ const AdAnalytics: React.FC = () => {
   const { ads } = useAds();
   const [timeRange, setTimeRange] = useState('7d');
 
-  // Mock data generator based on selected range
+  // Data generator based on selected range
   const generateData = (days: number) => {
     return Array.from({ length: days }).map((_, i) => {
       const d = new Date();

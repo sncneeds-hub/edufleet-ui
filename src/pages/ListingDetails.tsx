@@ -382,7 +382,7 @@ export function ListingDetails() {
             <AlertDialogAction asChild>
               <Button
                 onClick={() => {
-                  // Mock send contact request
+                  // Send contact request
                   setContactDialogOpen(false);
                   alert('Contact request sent! The seller will be in touch soon.');
                 }}

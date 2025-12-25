@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { mockVehicles, Vehicle } from '@/mock/vehicleData';
+import { Vehicle } from '@/api/types';
 import { Switch } from '@/components/ui/switch';
 import { CheckCircle2, XCircle, Star, Building2, Plus, ShieldCheck, Settings, Megaphone } from 'lucide-react';
 import { useAds } from '@/context/AdContext';
@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { SupplierForm } from '@/components/SupplierForm';
 import { SupplierCard } from '@/components/SupplierCard';
-import { categoryLabels } from '@/mock/supplierData';
+import { categoryLabels } from '@/constants/categories';
 import type { Supplier, CreateSupplierDto } from '@/api/types';
 import {
   getSuppliers,
@@ -36,14 +36,17 @@ import {
   rejectSupplier,
   toggleVerification
 } from '@/api/services/supplierService';
+import { adminService } from '@/api/services/adminService';
 import { AdminSettings } from '@/components/AdminSettings';
 
 export function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('vehicles-pending');
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
-  const [priorities, setPriorities] = useState<Set<string>>(new Set(mockVehicles.filter(v => v.isPriority).map(v => v.id)));
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [priorities, setPriorities] = useState<Set<string>>(new Set());
+  const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
+  const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priority: 0 });
   
   // Supplier state
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -65,8 +68,40 @@ export function AdminDashboard() {
     if (activeTab === 'suppliers-all' || activeTab === 'suppliers-pending') {
       loadSuppliers();
       loadSupplierStats();
+    } else if (activeTab === 'vehicles-pending' || activeTab === 'vehicles-all') {
+      loadVehicles();
+      loadVehicleStats();
     }
   }, [activeTab]);
+
+  const loadVehicles = async () => {
+    try {
+      setIsLoadingVehicles(true);
+      if (activeTab === 'vehicles-pending') {
+        const response = await adminService.getPendingApprovals();
+        setVehicles(response.data);
+      } else {
+        const response = await adminService.getAllVehicles();
+        setVehicles(response.data);
+      }
+      // Update priorities set
+      const priorityIds = vehicles.filter(v => v.isPriority).map(v => v.id);
+      setPriorities(new Set(priorityIds));
+    } catch (error) {
+      toast.error('Failed to load vehicles');
+    } finally {
+      setIsLoadingVehicles(false);
+    }
+  };
+
+  const loadVehicleStats = async () => {
+    try {
+      const response = await adminService.getStats();
+      setVehicleStats(response.data.vehicles);
+    } catch (error) {
+      console.error('Failed to load vehicle stats');
+    }
+  };
 
   const loadSuppliers = async () => {
     try {
@@ -186,28 +221,45 @@ export function AdminDashboard() {
 
   const suggestion = getSuggestedAction();
 
-  const handleApprove = (id: string) => {
-    setVehicles(prev => prev.map(v => 
-      v.id === id ? { ...v, status: 'approved' as const } : v
-    ));
-    toast.success('Listing approved successfully');
-  };
-
-  const handleReject = (id: string) => {
-    setVehicles(prev => prev.map(v => 
-      v.id === id ? { ...v, status: 'rejected' as const } : v
-    ));
-    toast.error('Listing rejected');
-  };
-
-  const togglePriority = (id: string) => {
-    const newPriorities = new Set(priorities);
-    if (newPriorities.has(id)) {
-      newPriorities.delete(id);
-    } else {
-      newPriorities.add(id);
+  const handleApprove = async (id: string) => {
+    try {
+      await adminService.updateApprovalStatus({ vehicleId: id, status: 'approved' });
+      toast.success('Listing approved successfully');
+      loadVehicles();
+      loadVehicleStats();
+    } catch (error) {
+      toast.error('Failed to approve listing');
     }
-    setPriorities(newPriorities);
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await adminService.updateApprovalStatus({ vehicleId: id, status: 'rejected' });
+      toast.error('Listing rejected');
+      loadVehicles();
+      loadVehicleStats();
+    } catch (error) {
+      toast.error('Failed to reject listing');
+    }
+  };
+
+  const togglePriority = async (id: string) => {
+    try {
+      const isPriority = !priorities.has(id);
+      await adminService.togglePriority({ vehicleId: id, isPriority });
+      
+      const newPriorities = new Set(priorities);
+      if (isPriority) {
+        newPriorities.add(id);
+      } else {
+        newPriorities.delete(id);
+      }
+      setPriorities(newPriorities);
+      toast.success(`Priority ${isPriority ? 'enabled' : 'disabled'}`);
+      loadVehicleStats();
+    } catch (error) {
+      toast.error('Failed to update priority');
+    }
   };
 
   const handleApproveAll = () => {
@@ -243,7 +295,7 @@ export function AdminDashboard() {
             </Card>
             <Card className="p-6">
               <p className="text-sm text-muted mb-2">Pending Approval</p>
-              <div className="text-3xl font-bold text-accent">{pendingListings.length}</div>
+              <div className="text-3xl font-bold text-accent">{vehicleStats.pending}</div>
             </Card>
             <Card className="p-6">
               <p className="text-sm text-muted mb-2">Approved</p>

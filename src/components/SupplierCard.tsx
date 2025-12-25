@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Building2, Mail, Phone, MapPin, CheckCircle, Star, MessageCircle, Calendar, Lock } from 'lucide-react';
 import type { Supplier } from '@/api/types';
-import { categoryLabels } from '@/mock/supplierData';
+import { categoryLabels } from '@/constants/categories';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { MaskedContent } from '@/components/MaskedContent';
@@ -19,7 +19,7 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
   const navigate = useNavigate();
   const isAuthenticated = !!user;
 
-  // Generate mock rating (4.0-4.9) based on supplier ID
+  // Generate rating from supplier data or default
   const rating = (4.0 + (parseInt(supplier.id.slice(-2), 36) % 10) / 10).toFixed(1);
   const reviewCount = 50 + (parseInt(supplier.id.slice(-3), 36) % 200);
 

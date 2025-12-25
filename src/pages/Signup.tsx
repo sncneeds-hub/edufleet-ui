@@ -4,10 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Mail, Lock, Building2, User, Send, CheckCircle, Phone } from 'lucide-react';
+import { Mail, Lock, Building2, User, Send } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { authService } from '@/services/authService';
 
 export function Signup() {
   const [formData, setFormData] = useState({
@@ -20,11 +18,8 @@ export function Signup() {
     instituteCode: '',
     phone: '',
   });
-  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'form' | 'otp'>('form');
-  const [demoOTP, setDemoOTP] = useState('');
 
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -37,7 +32,7 @@ export function Signup() {
     }));
   };
 
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -77,35 +72,6 @@ export function Signup() {
     }
 
     try {
-      const result = await authService.sendSignupOTP(formData.email);
-      if (result.success) {
-        setStep('otp');
-        // For demo purposes, show the OTP
-        if (result.otp) {
-          setDemoOTP(result.otp);
-        }
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    if (!otp || otp.length !== 6) {
-      setError('Please enter the 6-digit OTP');
-      setLoading(false);
-      return;
-    }
-
-    try {
       await signup(
         formData.name,
         formData.email,
@@ -113,12 +79,11 @@ export function Signup() {
         formData.instituteName,
         formData.contactPerson,
         formData.instituteCode,
-        formData.phone,
-        otp
+        formData.phone
       );
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid OTP. Please try again.');
+      setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -137,13 +102,12 @@ export function Signup() {
             EduFleet<span className="text-primary">Exchange</span>
           </h1>
           <p className="text-muted">
-            {step === 'form' ? 'Create your institution account' : 'Verify your email'}
+            Create your institution account
           </p>
         </div>
 
         <Card className="p-8 border-border">
-          {step === 'form' ? (
-            <form onSubmit={handleSendOTP} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Personal Information */}
             <div>
               <h3 className="font-semibold mb-4 text-lg">Personal Information</h3>
@@ -314,92 +278,9 @@ export function Signup() {
               disabled={loading}
             >
               <Send className="w-4 h-4" />
-              {loading ? 'Sending OTP...' : 'Send OTP'}
+              {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
-          ) : (
-            <form onSubmit={handleVerifyOTP} className="space-y-6">
-              {/* Success Message */}
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-green-700">
-                  <CheckCircle className="w-5 h-5" />
-                  <p className="font-medium">OTP Sent Successfully!</p>
-                </div>
-                <p className="text-sm text-green-600 mt-1">
-                  We've sent a 6-digit OTP to {formData.email}
-                </p>
-              </div>
-
-              {/* OTP Input */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Enter OTP</label>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-              </div>
-
-              {/* Demo OTP Display */}
-              {demoOTP && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                  <p className="font-medium mb-1">Demo OTP (for testing):</p>
-                  <p className="text-lg font-bold tracking-wider">{demoOTP}</p>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Buttons */}
-              <div className="space-y-3">
-                <Button
-                  type="submit"
-                  className="w-full gap-2"
-                  disabled={loading}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  {loading ? 'Verifying...' : 'Verify & Create Account'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setStep('form');
-                    setOtp('');
-                    setError('');
-                    setDemoOTP('');
-                  }}
-                  disabled={loading}
-                >
-                  Back to Form
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleSendOTP}
-                  disabled={loading}
-                >
-                  Resend OTP
-                </Button>
-              </div>
-            </form>
-          )}
 
           {/* Divider */}
           <div className="relative my-6">
