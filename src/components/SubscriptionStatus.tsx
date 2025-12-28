@@ -221,12 +221,13 @@ export function SubscriptionStatus() {
 
       {/* Active Subscription Card */}
       {!subscription ? (
-        <Alert variant="default" className="border-amber-200 bg-amber-50">
-          <AlertCircle className="h-4 w-4 text-amber-600" />
+        <Alert variant="default" className="border-blue-200 bg-blue-50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
           <div className="ml-4">
-            <p className="font-semibold text-amber-900">No Active Subscription</p>
-            <p className="text-sm text-amber-800 mt-1">
-              You don't have an active subscription yet. Choose a plan below to get started.
+            <p className="font-semibold text-blue-900">No Active Subscription</p>
+            <p className="text-sm text-blue-800 mt-1">
+              You don't have an active subscription yet. Choose a plan below and submit a request to get started. 
+              Our admin team will review and activate your subscription within 24 hours.
             </p>
           </div>
         </Alert>
@@ -440,20 +441,29 @@ export function SubscriptionStatus() {
                   </div>
 
                   {current ? (
-                    <Button disabled className="w-full" variant="outline">Current Plan</Button>
+                    <Button disabled className="w-full" variant="outline">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Current Plan
+                    </Button>
                   ) : pending ? (
                     <Button disabled className="w-full bg-amber-50 text-amber-600 border-amber-200" variant="outline">
+                      <Clock className="w-4 h-4 mr-2" />
                       Request Pending
                     </Button>
                   ) : (
                     <Button 
-                      className="w-full" 
+                      className="w-full gap-2" 
                       onClick={() => {
                         setRequestDialog({ open: true, plan, notes: '' });
                       }}
                       variant={isUpgrade ? "default" : "outline"}
                     >
-                      {isUpgrade ? 'Request Upgrade' : 'Request Downgrade'}
+                      <Send className="w-4 h-4" />
+                      {!subscription 
+                        ? 'Request Plan' 
+                        : isUpgrade 
+                        ? 'Request Upgrade' 
+                        : 'Request Downgrade'}
                     </Button>
                   )}
                 </Card>

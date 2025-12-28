@@ -580,12 +580,12 @@ export function SubscriptionManagement() {
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold">{request.userId?.name}</p>
+                        <p className="font-bold">{request.user?.name}</p>
                         <Badge variant="outline" className="text-[10px] h-4 uppercase">
-                          {request.userId?.role}
+                          {request.user?.role}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">{request.userId?.email}</p>
+                      <p className="text-xs text-muted-foreground">{request.user?.email}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge className={
                           request.requestType === 'upgrade' ? 'bg-green-100 text-green-700' : 
@@ -653,8 +653,8 @@ export function SubscriptionManagement() {
               {actionDialog.type === 'rejectRequest' && 'Reject Change Request'}
             </DialogTitle>
             <DialogDescription>
-              {actionDialog.type === 'approveRequest' && `Are you sure you want to approve the ${actionDialog.request?.requestType} request for ${actionDialog.request?.userId?.name}? This will update their plan and set their payment status to pending.`}
-              {actionDialog.type === 'rejectRequest' && `Are you sure you want to reject the ${actionDialog.request?.requestType} request for ${actionDialog.request?.userId?.name}?`}
+              {actionDialog.type === 'approveRequest' && `Are you sure you want to approve the ${actionDialog.request?.requestType} request for ${actionDialog.request?.user?.name}? This will update their plan and set their payment status to pending.`}
+              {actionDialog.type === 'rejectRequest' && `Are you sure you want to reject the ${actionDialog.request?.requestType} request for ${actionDialog.request?.user?.name}?`}
               {actionDialog.type === 'extend' && 'Extend the subscription end date by the specified number of months.'}
               {actionDialog.type === 'continue' && 'Continue the subscription for additional months.'}
               {actionDialog.type === 'reset' && 'Reset the browse count to zero for this user.'}
