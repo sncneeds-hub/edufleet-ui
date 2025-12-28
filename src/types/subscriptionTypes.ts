@@ -5,20 +5,23 @@ export interface SubscriptionPlan {
   displayName: string;
   description: string;
   planType: 'teacher' | 'institute' | 'vendor';
-  maxBrowseCount: number; // Number of full item detail views per billing period
-  maxListingCount: number; // Number of items user can create/list
-  maxJobPosts: number;
-  dataDelayDays: number; // Delay for vehicles and jobs in days
-  teacherDataDelayDays: number; // Delay for teacher profiles in days
-  canAdvertiseVehicles: boolean;
-  instantVehicleAlerts: boolean;
-  instantJobAlerts: boolean;
-  listingVisibilityDelayHours: number; // Delay before user sees new listings
-  notificationsEnabled: boolean; // Whether notifications are allowed
+  price: number;
+  currency: string;
+  duration: number; // in days
+  features: {
+    maxListings: number;
+    maxJobPosts: number;
+    maxBrowsesPerMonth: number;
+    dataDelayDays: number;
+    teacherDataDelayDays: number;
+    canAdvertiseVehicles: boolean;
+    instantVehicleAlerts: boolean;
+    instantJobAlerts: boolean;
+    priorityListings: boolean;
+    analytics: boolean;
+    supportLevel: 'basic' | 'priority' | 'premium';
+  };
   isActive: boolean;
-  features: string[]; // List of features included in plan
-  price: number; // For display only (admin-assigned, no payment)
-  billingPeriod: 'monthly' | 'yearly'; // For tracking purposes
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +45,11 @@ export interface UserSubscription {
   notes?: string; // Admin notes
   createdAt: string;
   updatedAt: string;
+  
+  // UI Display fields (joined)
+  userName?: string;
+  userEmail?: string;
+  userRole?: string;
 }
 
 // Notification Types
@@ -107,19 +115,22 @@ export interface CreateSubscriptionPlanDto {
   displayName: string;
   description: string;
   planType: 'teacher' | 'institute' | 'vendor';
-  maxBrowseCount: number;
-  maxListingCount: number;
-  maxJobPosts: number;
-  dataDelayDays: number;
-  teacherDataDelayDays: number;
-  canAdvertiseVehicles: boolean;
-  instantVehicleAlerts: boolean;
-  instantJobAlerts: boolean;
-  listingVisibilityDelayHours: number;
-  notificationsEnabled: boolean;
-  features: string[];
   price: number;
-  billingPeriod: 'monthly' | 'yearly';
+  currency?: string;
+  duration: number;
+  features: {
+    maxListings: number;
+    maxJobPosts: number;
+    maxBrowsesPerMonth: number;
+    dataDelayDays: number;
+    teacherDataDelayDays: number;
+    canAdvertiseVehicles: boolean;
+    instantVehicleAlerts: boolean;
+    instantJobAlerts: boolean;
+    priorityListings: boolean;
+    analytics: boolean;
+    supportLevel: 'basic' | 'priority' | 'premium';
+  };
 }
 
 export interface UpdateSubscriptionPlanDto extends Partial<CreateSubscriptionPlanDto> {

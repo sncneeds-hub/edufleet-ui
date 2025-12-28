@@ -173,11 +173,6 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
         {/* Suggested Action */}
         <DashboardSuggestion {...suggestion} />
 
-        {/* Subscription Status */}
-        <div className="mb-8">
-          <SubscriptionStatus />
-        </div>
-
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <Card className="p-6">
@@ -263,6 +258,16 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
             Profile
           </button>
           <button
+            onClick={() => setActiveTab('subscription')}
+            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+              activeTab === 'subscription'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Subscription
+          </button>
+          <button
             onClick={() => navigate('/suppliers')}
             className="px-4 py-2 font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground smooth-transition whitespace-nowrap"
           >
@@ -271,7 +276,14 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'jobs' ? (
+        {activeTab === 'subscription' ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Subscription Management</h2>
+            </div>
+            <SubscriptionStatus />
+          </div>
+        ) : activeTab === 'jobs' ? (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">My Job Openings</h2>

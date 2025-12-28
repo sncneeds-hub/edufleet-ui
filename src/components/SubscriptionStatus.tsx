@@ -122,7 +122,12 @@ export function SubscriptionStatus() {
       setContinuing(true);
       setError(null);
       
-      const currentPlanId = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
+      const currentPlanId = subscription?.subscriptionPlanId;
+      
+      if (!currentPlanId) {
+        toast.error('Unable to determine current plan. Please refresh and try again.');
+        return;
+      }
       
       const response = await createSubscriptionRequest({
         requestedPlanId: currentPlanId,
@@ -149,12 +154,16 @@ export function SubscriptionStatus() {
       setRequesting(true);
       
       // Determine request type
-      const currentPlan = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
-      const currentPlanObj = plans.find(p => p.id === currentPlan);
+      const currentPlanId = subscription?.subscriptionPlanId;
+      const currentPlanObj = plans.find(p => String(p.id) === String(currentPlanId));
       
-      let requestType: 'upgrade' | 'downgrade' = 'upgrade';
-      if (currentPlanObj && requestDialog.plan.price < currentPlanObj.price) {
-        requestType = 'downgrade';
+      let requestType: 'upgrade' | 'downgrade' | 'renewal' = 'upgrade';
+      if (currentPlanObj) {
+        if (requestDialog.plan.price < currentPlanObj.price) {
+          requestType = 'downgrade';
+        } else if (String(requestDialog.plan.id) === String(currentPlanId)) {
+          requestType = 'renewal';
+        }
       }
 
       const response = await createSubscriptionRequest({
@@ -186,27 +195,13 @@ export function SubscriptionStatus() {
 
   // Helper to check if plan is current
   const isCurrentPlan = (planId: string) => {
-    const currentPlanId = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
-    return String(currentPlanId) === String(planId);
+    const currentPlanId = subscription?.subscriptionPlanId;
+    return currentPlanId && String(currentPlanId) === String(planId);
   };
 
   const hasPendingRequest = (planId: string) => {
-    return requests.some(r => r.requestedPlanId === planId && r.status === 'pending');
+    return requests.some(r => String(r.requestedPlanId) === String(planId) && r.status === 'pending');
   };
-
-  if (!subscription) {
-    return (
-      <Alert variant="default" className="border-amber-200 bg-amber-50">
-        <AlertCircle className="h-4 w-4 text-amber-600" />
-        <div className="ml-4">
-          <p className="font-semibold text-amber-900">No Active Subscription</p>
-          <p className="text-sm text-amber-800 mt-1">
-            You don't have an active subscription. Contact an administrator to get started.
-          </p>
-        </div>
-      </Alert>
-    );
-  }
 
   const daysRemaining = stats?.daysRemaining ?? 0;
   const isExpiringSoon = stats?.isExpiringSoon ?? false;
@@ -225,151 +220,163 @@ export function SubscriptionStatus() {
       )}
 
       {/* Active Subscription Card */}
-      <Card className={`p-6 border-2 ${
-        isExpired
-          ? 'border-red-200 bg-red-50'
-          : subscription.paymentStatus === 'pending'
-          ? 'border-amber-200 bg-amber-50'
-          : isExpiringSoon
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-green-200 bg-green-50'
-      }`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-3">
-            {isExpired ? (
-              <AlertTriangle className="h-6 w-6 text-red-600 mt-1" />
-            ) : subscription.paymentStatus === 'pending' ? (
-              <CreditCard className="h-6 w-6 text-amber-600 mt-1" />
-            ) : isExpiringSoon ? (
-              <Clock className="h-6 w-6 text-amber-600 mt-1" />
-            ) : (
-              <CheckCircle className="h-6 w-6 text-green-600 mt-1" />
-            )}
-            <div>
-              <h3 className={`font-semibold text-lg ${
-                isExpired
-                  ? 'text-red-900'
-                  : subscription.paymentStatus === 'pending'
-                  ? 'text-amber-900'
-                  : isExpiringSoon
-                  ? 'text-amber-900'
-                  : 'text-green-900'
-              }`}>
-                {subscription.planName}
-              </h3>
-              <div className="flex flex-wrap gap-2 mt-1">
-                <p className={`text-sm ${
+      {!subscription ? (
+        <Alert variant="default" className="border-amber-200 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <div className="ml-4">
+            <p className="font-semibold text-amber-900">No Active Subscription</p>
+            <p className="text-sm text-amber-800 mt-1">
+              You don't have an active subscription yet. Choose a plan below to get started.
+            </p>
+          </div>
+        </Alert>
+      ) : (
+        <Card className={`p-6 border-2 ${
+          isExpired
+            ? 'border-red-200 bg-red-50'
+            : subscription.paymentStatus === 'pending'
+            ? 'border-amber-200 bg-amber-50'
+            : isExpiringSoon
+            ? 'border-amber-200 bg-amber-50'
+            : 'border-green-200 bg-green-50'
+        }`}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start gap-3">
+              {isExpired ? (
+                <AlertTriangle className="h-6 w-6 text-red-600 mt-1" />
+              ) : subscription.paymentStatus === 'pending' ? (
+                <CreditCard className="h-6 w-6 text-amber-600 mt-1" />
+              ) : isExpiringSoon ? (
+                <Clock className="h-6 w-6 text-amber-600 mt-1" />
+              ) : (
+                <CheckCircle className="h-6 w-6 text-green-600 mt-1" />
+              )}
+              <div>
+                <h3 className={`font-semibold text-lg ${
                   isExpired
-                    ? 'text-red-700'
+                    ? 'text-red-900'
                     : subscription.paymentStatus === 'pending'
-                    ? 'text-amber-700'
-                    : 'text-green-700'
+                    ? 'text-amber-900'
+                    : isExpiringSoon
+                    ? 'text-amber-900'
+                    : 'text-green-900'
                 }`}>
-                  Status: <span className="font-medium capitalize">{subscription.status}</span>
-                </p>
-                <Badge variant="outline" className={
-                  subscription.paymentStatus === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
-                  subscription.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200 animate-pulse' :
-                  'bg-red-100 text-red-700 border-red-200'
-                }>
-                  Payment: {subscription.paymentStatus?.toUpperCase() || 'PENDING'}
-                </Badge>
+                  {subscription.planName}
+                </h3>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <p className={`text-sm ${
+                    isExpired
+                      ? 'text-red-700'
+                      : subscription.paymentStatus === 'pending'
+                      ? 'text-amber-700'
+                      : 'text-green-700'
+                  }`}>
+                    Status: <span className="font-medium capitalize">{subscription.status}</span>
+                  </p>
+                  <Badge variant="outline" className={
+                    subscription.paymentStatus === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                    subscription.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200 animate-pulse' :
+                    'bg-red-100 text-red-700 border-red-200'
+                  }>
+                    Payment: {subscription.paymentStatus?.toUpperCase() || 'PENDING'}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {subscription.paymentStatus === 'pending' && (
-          <Alert className="mb-4 border-amber-200 bg-amber-100/50">
-            <Banknote className="h-4 w-4 text-amber-600" />
-            <div className="ml-4">
-              <p className="font-semibold text-amber-900">Payment Verification Pending</p>
-              <p className="text-sm mt-1 text-amber-800">
-                Your payment for this subscription is being verified. Please contact support if you have already completed the transfer.
+          {subscription.paymentStatus === 'pending' && (
+            <Alert className="mb-4 border-amber-200 bg-amber-100/50">
+              <Banknote className="h-4 w-4 text-amber-600" />
+              <div className="ml-4">
+                <p className="font-semibold text-amber-900">Payment Verification Pending</p>
+                <p className="text-sm mt-1 text-amber-800">
+                  Your payment for this subscription is being verified. Please contact support if you have already completed the transfer.
+                </p>
+              </div>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Days Remaining</p>
+              <p className={`text-2xl font-bold mt-1 ${
+                isExpired
+                  ? 'text-red-600'
+                  : isExpiringSoon
+                  ? 'text-amber-600'
+                  : 'text-green-600'
+              }`}>
+                {Math.max(0, daysRemaining)}
               </p>
             </div>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase">Days Remaining</p>
-            <p className={`text-2xl font-bold mt-1 ${
-              isExpired
-                ? 'text-red-600'
-                : isExpiringSoon
-                ? 'text-amber-600'
-                : 'text-green-600'
-            }`}>
-              {Math.max(0, daysRemaining)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase">Browse Used</p>
-            <p className="text-2xl font-bold mt-1">{stats?.browseCount?.used ?? 0} / {stats?.browseCount?.allowed ?? 0}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase">Listings Used</p>
-            <p className="text-2xl font-bold mt-1">{stats?.listingCount?.used ?? 0} / {stats?.listingCount?.allowed ?? 0}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase">Valid Until</p>
-            <p className="text-sm font-medium mt-1 break-words">
-              {new Date(subscription.endDate).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        {isExpired && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <div className="ml-4">
-              <p className="font-semibold">Subscription Expired</p>
-              <p className="text-sm mt-1">
-                Your subscription ended on {new Date(subscription.endDate).toLocaleDateString()}. 
-                Continue your subscription to restore access.
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Browse Used</p>
+              <p className="text-2xl font-bold mt-1">{stats?.browseCount?.used ?? 0} / {stats?.browseCount?.allowed ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Listings Used</p>
+              <p className="text-2xl font-bold mt-1">{stats?.listingCount?.used ?? 0} / {stats?.listingCount?.allowed ?? 0}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Valid Until</p>
+              <p className="text-sm font-medium mt-1 break-words">
+                {new Date(subscription.endDate).toLocaleDateString()}
               </p>
             </div>
-          </Alert>
-        )}
+          </div>
 
-        {isExpiringSoon && !isExpired && (
-          <Alert variant="default" className="mb-4 border-amber-200 bg-amber-50">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <div className="ml-4">
-              <p className="font-semibold text-amber-900">Expiring Soon</p>
-              <p className="text-sm mt-1 text-amber-800">
-                Your subscription expires in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. 
-                Continue now to avoid interruption of service.
-              </p>
-            </div>
-          </Alert>
-        )}
+          {isExpired && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <div className="ml-4">
+                <p className="font-semibold">Subscription Expired</p>
+                <p className="text-sm mt-1">
+                  Your subscription ended on {new Date(subscription.endDate).toLocaleDateString()}. 
+                  Continue your subscription to restore access.
+                </p>
+              </div>
+            </Alert>
+          )}
 
-        <div className="flex gap-2">
-          <Button
-            onClick={handleContinueSubscription}
-            disabled={continuing}
-            className="gap-2 flex-1"
-            size="lg"
-          >
-            {continuing ? 'Processing...' : (
-              <>
-                <ArrowRight className="w-4 h-4" />
-                Request Renewal
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={loadSubscription}
-            disabled={loading || continuing}
-            size="lg"
-          >
-            Refresh
-          </Button>
-        </div>
-      </Card>
+          {isExpiringSoon && !isExpired && (
+            <Alert variant="default" className="mb-4 border-amber-200 bg-amber-50">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <div className="ml-4">
+                <p className="font-semibold text-amber-900">Expiring Soon</p>
+                <p className="text-sm mt-1 text-amber-800">
+                  Your subscription expires in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. 
+                  Continue now to avoid interruption of service.
+                </p>
+              </div>
+            </Alert>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleContinueSubscription}
+              disabled={continuing}
+              className="gap-2 flex-1"
+              size="lg"
+            >
+              {continuing ? 'Processing...' : (
+                <>
+                  <ArrowRight className="w-4 h-4" />
+                  Request Renewal
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={loadSubscription}
+              disabled={loading || continuing}
+              size="lg"
+            >
+              Refresh
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Pending Requests */}
       {requests.length > 0 && requests.some(r => r.status === 'pending') && (

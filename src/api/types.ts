@@ -282,6 +282,7 @@ export type {
   BulkMarkReadDto,
   BrowseCheckResult,
   ListingCheckResult,
+  JobPostCheckResult,
   VisibilityCheckResult,
   SubscriptionStats,
   SubscriptionPlanStats,

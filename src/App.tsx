@@ -24,6 +24,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/sonner';
 
 // Admin imports
+import { AdminLogin } from '@/pages/AdminLogin';
 import { AdminLayout } from '@/pages/admin/AdminLayout';
 import { AdminOverview } from '@/pages/admin/AdminOverview';
 import { VehicleManagement } from '@/pages/admin/VehicleManagement';
@@ -66,6 +67,7 @@ function App() {
                 <Route path="/teacher/jobs" element={<TeacherJobBrowse />} />
                 <Route path="/teacher/job/:id" element={<TeacherJobDetails />} />
                 <Route path="/advertise" element={<Advertise />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
 
                 {/* Protected Routes - Institute Only */}
                 <Route 

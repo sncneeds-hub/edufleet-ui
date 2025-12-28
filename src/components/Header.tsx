@@ -103,6 +103,10 @@ export function Header() {
                     <span>Suppliers</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>
+                  <Link to="/#pricing" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Pricing</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
                   <div className="h-5 w-px bg-border/70"></div>
                 </>
               )}
@@ -195,6 +199,9 @@ export function Header() {
                   </Link>
                   <Link to="/suppliers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Suppliers</span>
+                  </Link>
+                  <Link to="/#pricing" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Pricing</span>
                   </Link>
                 </>
               ) : (

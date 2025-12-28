@@ -34,6 +34,7 @@ import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Switch } from '@/components/ui/switch';
+import { SubscriptionStatus } from '@/components/SubscriptionStatus'; // Assuming this component exists
 
 export function TeacherDashboard() {
   const { user, updateProfile, refreshProfile } = useAuth();
@@ -188,7 +189,18 @@ export function TeacherDashboard() {
             <TabsTrigger value="interviews">
               Interviews ({interviews.length})
             </TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
           </TabsList>
+
+          {/* Subscription Tab */}
+          <TabsContent value="subscription">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Subscription Management</h2>
+              </div>
+              <SubscriptionStatus />
+            </div>
+          </TabsContent>
 
           {/* Profile Tab */}
           <TabsContent value="profile">
