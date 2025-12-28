@@ -18,6 +18,7 @@ import { authService } from './services/authService';
 import * as jobService from './services/jobService';
 import * as teacherService from './services/teacherService';
 import * as supplierService from './services/supplierService';
+import * as subscriptionService from './services/subscriptionService';
 
 /**
  * Main API object
@@ -53,4 +54,9 @@ export const api = {
    * Supplier-related API calls
    */
   suppliers: supplierService,
+
+  /**
+   * Subscription-related API calls
+   */
+  subscriptions: subscriptionService,
 };

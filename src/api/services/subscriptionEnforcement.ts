@@ -5,6 +5,7 @@ import {
   ListingCheckResult,
   VisibilityCheckResult,
   ApiResponse,
+  JobPostCheckResult, // Added this import
 } from '../types';
 
 // ==========================================
@@ -115,6 +116,53 @@ export const decrementListingCount = async (): Promise<ApiResponse<{ success: bo
       success: false,
       data: { success: false },
       message: error.response?.data?.error || error.message || 'Failed to decrement listing count',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+// ==========================================
+// JOB POST LIMIT ENFORCEMENT
+// ==========================================
+
+export const checkJobPostLimit = async (): Promise<ApiResponse<JobPostCheckResult>> => {
+  try {
+    const response = await apiClient.get('/subscriptions/check/job-post-limit');
+    return {
+      success: true,
+      data: response.data,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: {
+        allowed: false,
+        remaining: 0,
+        limitReached: true,
+        subscription: null,
+        message: 'Failed to check job post limit',
+      },
+      message: error.response?.data?.error || error.message || 'Failed to check job post limit',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+export const incrementJobPostCount = async (): Promise<ApiResponse<{ success: boolean }>> => {
+  try {
+    const response = await apiClient.post('/subscriptions/increment/job-post-count');
+    return {
+      success: true,
+      data: { success: response.data.success },
+      message: response.data.message,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: { success: false },
+      message: error.response?.data?.error || error.message || 'Failed to increment job post count',
       timestamp: new Date().toISOString(),
     };
   }

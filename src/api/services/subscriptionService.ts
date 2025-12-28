@@ -43,7 +43,7 @@ export const getAllSubscriptionPlans = async (): Promise<ApiResponse<Subscriptio
 
 export const getActiveSubscriptionPlans = async (): Promise<ApiResponse<SubscriptionPlan[]>> => {
   try {
-    const plans = await apiClient.get<SubscriptionPlan[]>('/subscriptions/plans/active', { requiresAuth: true });
+    const plans = await apiClient.get<SubscriptionPlan[]>('/subscriptions/plans/active', { requiresAuth: false });
     
     return {
       success: true,
@@ -530,6 +530,33 @@ export const updateSubscriptionRequest = async (
     throw {
       success: false,
       error: error.message || 'Failed to update subscription request',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+// Change user subscription plan (Admin only)
+export const changeUserSubscriptionPlan = async (
+  subscriptionId: string,
+  newPlanId: string,
+  notes?: string
+): Promise<ApiResponse<UserSubscription>> => {
+  try {
+    const subscription = await apiClient.put<UserSubscription>(
+      `/subscriptions/${subscriptionId}/change-plan`,
+      { planId: newPlanId, notes }
+    );
+    
+    return {
+      success: true,
+      data: subscription,
+      message: 'Subscription plan changed successfully',
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to change subscription plan',
       timestamp: new Date().toISOString(),
     };
   }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/api';
 import type { Vehicle, VehicleFilters, CreateVehicleDto, UpdateVehicleDto, Job } from '@/api/types';
 import type { Teacher, TeacherFilters } from '@/api/services/teacherService';
+import type { SubscriptionPlan } from '@/types/subscriptionTypes';
 
 /**
  * Hook to fetch vehicles with filters
@@ -506,4 +507,33 @@ export function useTeacherById(id: string | undefined) {
   }, [id]);
 
   return { teacher, loading, error };
+}
+
+/**
+ * Hook to fetch active subscription plans
+ */
+export function useSubscriptionPlans() {
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.subscriptions.getActiveSubscriptionPlans();
+        setPlans(response.data);
+      } catch (err: any) {
+        setError(err.error || 'Failed to load subscription plans');
+        console.error('Error fetching subscription plans:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPlans();
+  }, []);
+
+  return { plans, loading, error };
 }

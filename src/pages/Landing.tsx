@@ -13,11 +13,23 @@ import {
 } from 'lucide-react';
 import { api } from '@/api';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { PricingSection } from '@/components/PricingSection';
 
 export function Landing() {
   const navigate = useNavigate();
   const { listings: priorityListings = [], loading: priorityLoading } = usePriorityListings();
   
+  // Handle hash scroll
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#pricing') {
+      const element = document.getElementById('pricing');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [window.location.hash]);
+
   // State for jobs and suppliers from API
   const [featuredJobs, setFeaturedJobs] = useState<any[]>([]);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<any[]>([]);
@@ -310,6 +322,9 @@ export function Landing() {
       <div className="container mx-auto px-4 pb-12">
         <AdSlot placement="LP_INLINE_1" variant="banner" />
       </div>
+
+      {/* Pricing Section */}
+      <PricingSection />
 
       {/* CTA Section */}
       <section className="bg-primary text-primary-foreground py-16">
