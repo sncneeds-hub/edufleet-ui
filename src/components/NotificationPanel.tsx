@@ -93,7 +93,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-sm text-muted">
+      <div className="p-6 text-center text-sm text-muted-foreground">
         Loading notifications...
       </div>
     );
@@ -129,7 +129,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
       {/* Notifications List */}
       {notifications.length === 0 ? (
-        <div className="p-6 text-center text-sm text-muted">
+        <div className="p-6 text-center text-sm text-muted-foreground">
           No notifications yet
         </div>
       ) : (
@@ -153,7 +153,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                           <p className="font-medium text-sm">
                             {notification.title}
                           </p>
-                          <p className="text-xs text-muted mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {getTypeLabel(notification.type)}
                           </p>
                         </div>
@@ -169,7 +169,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                       </p>
 
                       {/* Timestamp */}
-                      <div className="flex items-center gap-1 text-xs text-muted mt-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
                         <Clock className="w-3 h-3" />
                         {new Date(notification.createdAt).toLocaleString()}
                       </div>

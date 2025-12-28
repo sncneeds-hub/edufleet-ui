@@ -244,11 +244,11 @@ export function ListingForm() {
                   className="hidden"
                 />
                 
-                <Upload className="w-12 h-12 mx-auto mb-4 text-muted" />
+                <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-sm font-medium mb-2">
                   Drag and drop images here, or click to browse
                 </p>
-                <p className="text-xs text-muted mb-4">
+                <p className="text-xs text-muted-foreground mb-4">
                   Supports: JPEG, PNG, WebP • Max 5MB per file • Up to 10 images
                 </p>
                 <Button
@@ -568,7 +568,7 @@ export function ListingForm() {
                 {uploading ? 'Uploading images...' : 'Create Listing'}
               </Button>
               {uploadedImages.length === 0 && (
-                <p className="text-sm text-muted text-center mt-2">
+                <p className="text-sm text-muted-foreground text-center mt-2">
                   Please upload at least one image to create listing
                 </p>
               )}
@@ -596,7 +596,7 @@ export function ListingForm() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="h-full flex items-center justify-center text-muted text-sm">
+                      <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                         Upload images to preview
                       </div>
                     )}
@@ -622,7 +622,7 @@ export function ListingForm() {
                   {formData.title && (
                     <div>
                       <h4 className="font-semibold line-clamp-2">{formData.title}</h4>
-                      <p className="text-sm text-muted">{formData.manufacturer} {formData.model} • {formData.year}</p>
+                      <p className="text-sm text-muted-foreground">{formData.manufacturer} {formData.model} • {formData.year}</p>
                     </div>
                   )}
                   {formData.price && (
@@ -631,7 +631,7 @@ export function ListingForm() {
                 </>
               )}
               {!formData.title && uploadedImages.length === 0 && (
-                 <div className="text-center text-muted py-8">
+                 <div className="text-center text-muted-foreground py-8">
                    Upload images and fill form to see preview
                  </div>
               )}

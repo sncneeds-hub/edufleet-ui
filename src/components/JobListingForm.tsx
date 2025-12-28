@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Plus, X } from 'lucide-react';
+import { Briefcase, Plus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createJob } from '@/api/services/jobService';
+import { useAuth } from '@/context/AuthContext';
 
 export function JobListingForm() {
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     department: '',
@@ -61,6 +65,36 @@ export function JobListingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate required fields
+    if (!formData.title.trim()) {
+      toast.error('Please enter job title');
+      return;
+    }
+    if (!formData.department.trim()) {
+      toast.error('Please enter department');
+      return;
+    }
+    if (!formData.location.trim()) {
+      toast.error('Please enter location');
+      return;
+    }
+    if (!formData.experience.trim()) {
+      toast.error('Please enter experience requirement');
+      return;
+    }
+    if (!formData.salaryMin || !formData.salaryMax) {
+      toast.error('Please enter salary range');
+      return;
+    }
+    if (!formData.description.trim()) {
+      toast.error('Please enter job description');
+      return;
+    }
+    if (!formData.deadline) {
+      toast.error('Please select application deadline');
+      return;
+    }
+
     // Filter out empty items
     const filteredRequirements = requirements.filter(r => r.trim() !== '');
     const filteredResponsibilities = responsibilities.filter(r => r.trim() !== '');
@@ -76,13 +110,52 @@ export function JobListingForm() {
       return;
     }
 
-    toast.success('Job listing created successfully!');
-    console.log('Job listing data:', {
-      ...formData,
-      requirements: filteredRequirements,
-      responsibilities: filteredResponsibilities,
-      benefits: filteredBenefits,
-    });
+    setIsSubmitting(true);
+    try {
+      const jobData = {
+        title: formData.title,
+        department: formData.department,
+        location: formData.location,
+        type: formData.type,
+        experience: formData.experience,
+        salaryMin: parseInt(formData.salaryMin) || 0,
+        salaryMax: parseInt(formData.salaryMax) || 0,
+        description: formData.description,
+        deadline: formData.deadline,
+        requirements: filteredRequirements,
+        responsibilities: filteredResponsibilities,
+        benefits: filteredBenefits,
+        userId: user?.id, // Include user ID for the request
+      };
+
+      const response = await createJob(jobData);
+      
+      if (response.success || response.data) {
+        toast.success('Job listing created successfully!');
+        
+        // Reset form
+        setFormData({
+          title: '',
+          department: '',
+          location: '',
+          type: 'full-time',
+          experience: '',
+          salaryMin: '',
+          salaryMax: '',
+          description: '',
+          deadline: '',
+        });
+        setRequirements(['']);
+        setResponsibilities(['']);
+        setBenefits(['']);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.error || error?.message || 'Failed to create job listing';
+      toast.error(errorMsg);
+      console.error('Job creation error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -344,8 +417,15 @@ export function JobListingForm() {
             </div>
 
             <div className="pt-4 border-t border-border">
-              <Button type="submit" className="w-full">
-                Create Job Listing
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Job Listing'
+                )}
               </Button>
             </div>
           </form>
@@ -363,10 +443,10 @@ export function JobListingForm() {
                     <h4 className="font-bold line-clamp-2">{formData.title}</h4>
                   </div>
                   {formData.department && (
-                    <p className="text-sm text-muted">{formData.department}</p>
+                    <p className="text-sm text-muted-foreground">{formData.department}</p>
                   )}
                   {formData.location && (
-                    <p className="text-sm text-muted">{formData.location}</p>
+                    <p className="text-sm text-muted-foreground">{formData.location}</p>
                   )}
                   {(formData.salaryMin && formData.salaryMax) && (
                     <div className="text-lg font-bold text-primary">
@@ -384,7 +464,7 @@ export function JobListingForm() {
                   )}
                 </>
               ) : (
-                <div className="text-center text-muted py-8">
+                <div className="text-center text-muted-foreground py-8">
                   Fill form to see preview
                 </div>
               )}

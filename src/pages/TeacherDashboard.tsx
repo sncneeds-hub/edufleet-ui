@@ -23,26 +23,54 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Eye
+  Eye,
+  Plus,
+  Search,
+  SearchCheck,
+  SearchX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { Switch } from '@/components/ui/switch';
 
 export function TeacherDashboard() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
+    name: user?.name || '',
     phone: user?.phone || '',
     location: user?.location || '',
     bio: user?.bio || '',
+    experience: user?.experience || 0,
+    qualifications: user?.qualifications || [],
+    subjects: user?.subjects || [],
+    isAvailable: user?.isAvailable ?? true,
   });
+  const [newQual, setNewQual] = useState('');
+  const [newSubject, setNewSubject] = useState('');
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadApplications();
+    refreshProfile();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setEditData({
+        name: user.name || '',
+        phone: user.phone || '',
+        location: user.location || '',
+        bio: user.bio || '',
+        experience: user.experience || 0,
+        qualifications: user.qualifications || [],
+        subjects: user.subjects || [],
+        isAvailable: user.isAvailable ?? true,
+      });
+      loadApplications();
+    }
   }, [user]);
 
   const loadApplications = async () => {
@@ -69,6 +97,40 @@ export function TeacherDashboard() {
       setIsEditing(false);
       toast.success('Profile updated successfully!');
     }
+  };
+
+  const addQualification = () => {
+    if (newQual.trim() && !editData.qualifications.includes(newQual.trim())) {
+      setEditData({
+        ...editData,
+        qualifications: [...editData.qualifications, newQual.trim()]
+      });
+      setNewQual('');
+    }
+  };
+
+  const removeQualification = (qual: string) => {
+    setEditData({
+      ...editData,
+      qualifications: editData.qualifications.filter(q => q !== qual)
+    });
+  };
+
+  const addSubject = () => {
+    if (newSubject.trim() && !editData.subjects.includes(newSubject.trim())) {
+      setEditData({
+        ...editData,
+        subjects: [...editData.subjects, newSubject.trim()]
+      });
+      setNewSubject('');
+    }
+  };
+
+  const removeSubject = (subj: string) => {
+    setEditData({
+      ...editData,
+      subjects: editData.subjects.filter(s => s !== subj)
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -138,9 +200,23 @@ export function TeacherDashboard() {
                       <AvatarImage src={user.avatar} />
                       <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <CardTitle className="text-2xl">{user.name}</CardTitle>
-                      <CardDescription>{user.email}</CardDescription>
+                    <div className="space-y-1">
+                      {isEditing ? (
+                        <div className="space-y-1">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input
+                            id="name"
+                            value={editData.name}
+                            onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                            className="text-2xl font-bold h-auto py-1"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <CardTitle className="text-2xl">{user.name}</CardTitle>
+                          <CardDescription>{user.email}</CardDescription>
+                        </>
+                      )}
                     </div>
                   </div>
                   <Button 
@@ -152,6 +228,32 @@ export function TeacherDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Searchability Toggle */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${editData.isAvailable ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      {editData.isAvailable ? <SearchCheck className="h-5 w-5" /> : <SearchX className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <p className="font-semibold">Institute Searchability</p>
+                      <p className="text-sm text-muted-foreground">
+                        {editData.isAvailable 
+                          ? 'Your profile is visible to institutes looking for teachers' 
+                          : 'Your profile is hidden from institute searches'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="isAvailable" className="sr-only">Toggle Searchability</Label>
+                    <Switch
+                      id="isAvailable"
+                      checked={editData.isAvailable}
+                      onCheckedChange={(checked) => setEditData({ ...editData, isAvailable: checked })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
+
                 {/* Contact Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Contact Information</h3>
@@ -172,7 +274,7 @@ export function TeacherDashboard() {
                     ) : (
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.phone}</span>
+                        <span>{user.phone || 'Not provided'}</span>
                       </div>
                     )}
                     {isEditing ? (
@@ -187,12 +289,25 @@ export function TeacherDashboard() {
                     ) : (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.location}</span>
+                        <span>{user.location || 'Not provided'}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span>{user.experience} years experience</span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Briefcase className="h-4 w-4" />
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editData.experience}
+                            onChange={(e) => setEditData({ ...editData, experience: parseInt(e.target.value) || 0 })}
+                            className="w-20"
+                          />
+                          <span>years experience</span>
+                        </div>
+                      ) : (
+                        <span>{user.experience || 0} years experience</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -203,13 +318,39 @@ export function TeacherDashboard() {
                     <Award className="h-5 w-5" />
                     Qualifications
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {user.qualifications?.map((qual) => (
-                      <Badge key={qual} variant="secondary">
-                        {qual}
-                      </Badge>
-                    ))}
-                  </div>
+                  {isEditing ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {editData.qualifications?.map((qual) => (
+                          <Badge key={qual} variant="secondary" className="flex items-center gap-1">
+                            {qual}
+                            <button onClick={() => removeQualification(qual)} className="ml-1 text-red-500 hover:text-red-700">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Add new qualification"
+                          value={newQual}
+                          onChange={(e) => setNewQual(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addQualification()}
+                          className="max-w-sm"
+                        />
+                        <Button onClick={addQualification} size="sm">Add</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {user.qualifications?.map((qual) => (
+                        <Badge key={qual} variant="secondary">
+                          {qual}
+                        </Badge>
+                      ))}
+                      {user.qualifications?.length === 0 && <p className="text-muted-foreground">No qualifications added yet</p>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Subjects */}
@@ -218,13 +359,39 @@ export function TeacherDashboard() {
                     <BookOpen className="h-5 w-5" />
                     Subjects
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {user.subjects?.map((subj) => (
-                      <Badge key={subj} variant="outline">
-                        {subj}
-                      </Badge>
-                    ))}
-                  </div>
+                  {isEditing ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {editData.subjects?.map((subj) => (
+                          <Badge key={subj} variant="outline" className="flex items-center gap-1">
+                            {subj}
+                            <button onClick={() => removeSubject(subj)} className="ml-1 text-red-500 hover:text-red-700">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Add new subject"
+                          value={newSubject}
+                          onChange={(e) => setNewSubject(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addSubject()}
+                          className="max-w-sm"
+                        />
+                        <Button onClick={addSubject} size="sm">Add</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {user.subjects?.map((subj) => (
+                        <Badge key={subj} variant="outline">
+                          {subj}
+                        </Badge>
+                      ))}
+                      {user.subjects?.length === 0 && <p className="text-muted-foreground">No subjects added yet</p>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Bio */}
@@ -325,7 +492,7 @@ export function TeacherDashboard() {
                         )}
 
                         <div className="flex gap-2">
-                          <Link to={`/job/${job?._id || app.jobId}`}>
+                          <Link to={`/job/${job?._id || job?.id || (typeof app.jobId === 'string' ? app.jobId : app.jobId?._id || app.jobId?.id)}`}>
                             <Button variant="outline" size="sm">
                               <Eye className="h-4 w-4 mr-2" />
                               View Job

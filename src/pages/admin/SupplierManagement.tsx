@@ -12,28 +12,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Supplier, CreateSupplierDto } from '@/api/types';
 import {
   getSuppliers,
   getSupplierStats,
   createSupplier,
-  approveSupplier,
   rejectSupplier,
   toggleVerification
 } from '@/api/services/supplierService';
+import { adminService } from '@/api/services/adminService';
+import * as subscriptionService from '@/api/services/subscriptionService';
 
 export function SupplierManagement() {
   const { type } = useParams<{ type: 'pending' | 'all' }>();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [supplierStats, setSupplierStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [approvalDialog, setApprovalDialog] = useState<{
+    open: boolean;
+    supplier: Supplier | null;
+    planId: string;
+  }>({
+    open: false,
+    supplier: null,
+    planId: '',
+  });
 
   const isPendingView = type === 'pending';
 
   useEffect(() => {
     loadSuppliers();
     loadSupplierStats();
+    loadPlans();
   }, [type]);
 
   const loadSuppliers = async () => {
@@ -58,6 +77,17 @@ export function SupplierManagement() {
     }
   };
 
+  const loadPlans = async () => {
+    try {
+      const response = await subscriptionService.getAllPlans();
+      if (response.success) {
+        setPlans(response.data.filter((p: any) => p.planType === 'vendor' || p.planType === 'institute'));
+      }
+    } catch (error) {
+      console.error('Failed to load plans');
+    }
+  };
+
   const handleAddSupplier = async (data: CreateSupplierDto) => {
     try {
       setIsLoading(true);
@@ -73,14 +103,22 @@ export function SupplierManagement() {
     }
   };
 
-  const handleApproveSupplier = async (id: string) => {
+  const handleApproveSupplier = async () => {
+    if (!approvalDialog.supplier) return;
     try {
-      await approveSupplier(id);
+      setIsLoading(true);
+      await adminService.approveSupplierStatus(approvalDialog.supplier.id, {
+        status: 'approved',
+        planId: approvalDialog.planId || undefined,
+      });
       toast.success('Supplier approved');
+      setApprovalDialog({ open: false, supplier: null, planId: '' });
       loadSuppliers();
       loadSupplierStats();
     } catch (error) {
       toast.error('Failed to approve supplier');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -114,7 +152,7 @@ export function SupplierManagement() {
           <h1 className="text-3xl font-bold mb-2">
             {isPendingView ? 'Pending Supplier Approvals' : 'All Suppliers'}
           </h1>
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             {isPendingView 
               ? 'Review and approve new supplier registrations' 
               : 'Manage all suppliers and verification status'}
@@ -129,23 +167,23 @@ export function SupplierManagement() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <Card className="p-6">
-          <p className="text-sm text-muted mb-2">Total Suppliers</p>
+          <p className="text-sm text-muted-foreground mb-2">Total Suppliers</p>
           <div className="text-3xl font-bold text-primary">{supplierStats.total}</div>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-muted mb-2">Pending</p>
+          <p className="text-sm text-muted-foreground mb-2">Pending</p>
           <div className="text-3xl font-bold text-accent">{supplierStats.pending}</div>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-muted mb-2">Approved</p>
+          <p className="text-sm text-muted-foreground mb-2">Approved</p>
           <div className="text-3xl font-bold text-secondary">{supplierStats.approved}</div>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-muted mb-2">Verified</p>
+          <p className="text-sm text-muted-foreground mb-2">Verified</p>
           <div className="text-3xl font-bold text-green-600">{supplierStats.verified}</div>
         </Card>
         <Card className="p-6">
-          <p className="text-sm text-muted mb-2">Rejected</p>
+          <p className="text-sm text-muted-foreground mb-2">Rejected</p>
           <div className="text-3xl font-bold text-red-600">{supplierStats.rejected}</div>
         </Card>
       </div>
@@ -154,13 +192,13 @@ export function SupplierManagement() {
       {isLoading ? (
         <Card className="p-12 text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted mt-4">Loading suppliers...</p>
+          <p className="text-muted-foreground mt-4">Loading suppliers...</p>
         </Card>
       ) : suppliers.length === 0 ? (
         <Card className="p-12 text-center">
-          <Building2 className="w-12 h-12 text-muted mx-auto mb-4" />
-          <p className="text-muted mb-2">No {isPendingView ? 'pending' : ''} suppliers found</p>
-          <p className="text-xs text-muted mb-4">
+          <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground mb-2">No {isPendingView ? 'pending' : ''} suppliers found</p>
+          <p className="text-xs text-muted-foreground mb-4">
             {isPendingView 
               ? 'Pending suppliers will appear here' 
               : 'Add suppliers to help institutes find service providers'}
@@ -183,7 +221,7 @@ export function SupplierManagement() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleApproveSupplier(supplier.id)}
+                      onClick={() => setApprovalDialog({ open: true, supplier, planId: '' })}
                       className="bg-white shadow-sm hover:bg-green-50 text-green-600"
                       title="Approve"
                     >
@@ -231,6 +269,47 @@ export function SupplierManagement() {
             </DialogTitle>
           </DialogHeader>
           <SupplierForm onSubmit={handleAddSupplier} isLoading={isLoading} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval Dialog */}
+      <Dialog open={approvalDialog.open} onOpenChange={(open) => !open && setApprovalDialog({ open: false, supplier: null, planId: '' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Supplier Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              You are approving the supplier profile for <strong>{approvalDialog.supplier?.name}</strong>.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assign Subscription Plan (Optional)</label>
+              <Select value={approvalDialog.planId} onValueChange={(val) => setApprovalDialog(prev => ({ ...prev, planId: val }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No plan change (keep current)</SelectItem>
+                  {plans.map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.displayName} (₹{plan.price})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Upgrading the plan will give the supplier more features and visibility.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setApprovalDialog({ open: false, supplier: null, planId: '' })}>
+              Cancel
+            </Button>
+            <Button onClick={handleApproveSupplier} disabled={isLoading}>
+              {isLoading ? 'Approving...' : 'Confirm Approval'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

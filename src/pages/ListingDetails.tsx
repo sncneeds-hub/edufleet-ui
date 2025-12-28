@@ -80,7 +80,7 @@ export function ListingDetails() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Vehicle Not Found</h1>
-        <p className="text-muted mb-6">{error || 'The vehicle you are looking for does not exist.'}</p>
+        <p className="text-muted-foreground mb-6">{error || 'The vehicle you are looking for does not exist.'}</p>
         <Button onClick={() => navigate('/browse')}>Back to Browse</Button>
       </div>
     );
@@ -118,7 +118,7 @@ export function ListingDetails() {
               <Lock className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-semibold mb-1">Full Details Require Login</h3>
-                <p className="text-sm text-muted mb-3">
+                <p className="text-sm text-muted-foreground mb-3">
                   Price, seller information, and registration number are hidden for guest users.
                 </p>
                 <Button size="sm" onClick={() => navigate('/login')}>
@@ -193,7 +193,7 @@ export function ListingDetails() {
             {/* Description */}
             <Card className="p-6 mt-6">
               <h2 className="text-2xl font-bold mb-4">About This Vehicle</h2>
-              <p className="text-muted mb-4">{vehicle.description}</p>
+              <p className="text-muted-foreground mb-4">{vehicle.description}</p>
 
               {/* Features */}
               <div>
@@ -218,21 +218,21 @@ export function ListingDetails() {
             {/* Title & Specs */}
             <Card className="p-6 mb-6">
               <h1 className="text-2xl font-bold mb-2">{vehicle.title}</h1>
-              <p className="text-sm text-muted mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 {vehicle.manufacturer} {vehicle.model}
               </p>
 
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="w-4 h-4 text-muted flex-shrink-0" />
+                  <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span>Year: <strong>{vehicle.year}</strong></span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <Gauge className="w-4 h-4 text-muted flex-shrink-0" />
+                  <Gauge className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span>Mileage: <strong>{(vehicle.mileage / 1000).toFixed(0)}k km</strong></span>
                 </div>
                 <div className="flex items-center gap-3 text-sm capitalize">
-                  <span className="w-4 h-4 text-muted flex-shrink-0" />
+                  <span className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span>Condition: <strong>{vehicle.condition}</strong></span>
                 </div>
               </div>
@@ -241,14 +241,14 @@ export function ListingDetails() {
               <div className="mb-6 pb-6 border-b border-border">
                 {isUnmasked ? (
                   <div>
-                    <p className="text-sm text-muted mb-1">Price</p>
+                    <p className="text-sm text-muted-foreground mb-1">Price</p>
                     <div className="text-4xl font-bold text-primary">
                       ₹{vehicle.price.toLocaleString()}
                     </div>
                   </div>
                 ) : (
                   <div>
-                     <p className="text-sm text-muted mb-1">Price</p>
+                     <p className="text-sm text-muted-foreground mb-1">Price</p>
                      <MaskedContent 
                        variant="text" 
                        label="Login to view price" 
@@ -262,7 +262,7 @@ export function ListingDetails() {
 
               {/* Registration Number */}
               <div className="mb-6 pb-6 border-b border-border">
-                <p className="text-sm text-muted mb-1">Registration Number</p>
+                <p className="text-sm text-muted-foreground mb-1">Registration Number</p>
                 {isUnmasked ? (
                   <p className="font-mono font-semibold">{vehicle.registrationNumber}</p>
                 ) : (
@@ -280,25 +280,25 @@ export function ListingDetails() {
                     {vehicle.insurance?.valid && (
                       <div>
                         <p className="font-medium text-green-600">✓ Insurance Valid</p>
-                        <p className="text-xs text-muted">{vehicle.insurance.provider} • Expires: {vehicle.insurance.expiryDate}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.insurance.provider} • Expires: {vehicle.insurance.expiryDate}</p>
                       </div>
                     )}
                     {vehicle.fitness?.valid && (
                       <div>
                         <p className="font-medium text-green-600">✓ Fitness Certificate Valid</p>
-                        <p className="text-xs text-muted">Expires: {vehicle.fitness.expiryDate}</p>
+                        <p className="text-xs text-muted-foreground">Expires: {vehicle.fitness.expiryDate}</p>
                       </div>
                     )}
                     {vehicle.roadTax?.valid && (
                       <div>
                         <p className="font-medium text-green-600">✓ Road Tax Valid</p>
-                        <p className="text-xs text-muted">Expires: {vehicle.roadTax.expiryDate}</p>
+                        <p className="text-xs text-muted-foreground">Expires: {vehicle.roadTax.expiryDate}</p>
                       </div>
                     )}
                     {vehicle.permit?.valid && (
                       <div>
                         <p className="font-medium text-green-600">✓ Permit Valid</p>
-                        <p className="text-xs text-muted">{vehicle.permit.type} • Expires: {vehicle.permit.expiryDate}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.permit.permitType} • Expires: {vehicle.permit.expiryDate}</p>
                       </div>
                     )}
                   </div>
@@ -318,15 +318,15 @@ export function ListingDetails() {
                 {isUnmasked ? (
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted" />
+                      <User className="w-4 h-4 text-muted-foreground" />
                       <span>{vehicle.sellerName}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted" />
+                      <Mail className="w-4 h-4 text-muted-foreground" />
                       <span>{vehicle.sellerEmail}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted" />
+                      <Phone className="w-4 h-4 text-muted-foreground" />
                       <span>{vehicle.sellerPhone}</span>
                     </div>
                   </div>
@@ -366,15 +366,15 @@ export function ListingDetails() {
           <div className="space-y-3 my-4">
             <div>
               <p className="text-sm font-medium mb-1">Seller Name</p>
-              <p className="text-sm text-muted">{vehicle.sellerName}</p>
+              <p className="text-sm text-muted-foreground">{vehicle.sellerName}</p>
             </div>
             <div>
               <p className="text-sm font-medium mb-1">Email</p>
-              <p className="text-sm text-muted">{vehicle.sellerEmail}</p>
+              <p className="text-sm text-muted-foreground">{vehicle.sellerEmail}</p>
             </div>
             <div>
               <p className="text-sm font-medium mb-1">Phone</p>
-              <p className="text-sm text-muted">{vehicle.sellerPhone}</p>
+              <p className="text-sm text-muted-foreground">{vehicle.sellerPhone}</p>
             </div>
           </div>
           <div className="flex gap-2 justify-end">

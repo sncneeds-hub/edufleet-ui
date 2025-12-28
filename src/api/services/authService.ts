@@ -19,6 +19,7 @@ export interface User {
   subjects?: string[];
   bio?: string;
   location?: string;
+  isAvailable?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -154,11 +155,30 @@ export const authService = {
   },
 
   /**
+   * Get current user profile
+   */
+  async getProfile(): Promise<User> {
+    try {
+      return await apiClient.get<User>(API_CONFIG.ENDPOINTS.PROFILE);
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to fetch profile');
+    }
+  },
+
+  /**
    * Update user profile
    */
   async updateProfile(data: Partial<User>): Promise<User> {
     try {
-      return await apiClient.put<User>(API_CONFIG.ENDPOINTS.ME, data);
+      const response = await apiClient.put<User>(API_CONFIG.ENDPOINTS.PROFILE, data);
+      
+      // Update stored user if it's the current user's profile
+      const storedUser = this.getStoredUser();
+      if (storedUser) {
+        localStorage.setItem('user', JSON.stringify({ ...storedUser, ...response }));
+      }
+      
+      return response;
     } catch (error: any) {
       throw new Error(error.message || 'Failed to update profile');
     }

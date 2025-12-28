@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Zap,
   Ban,
+  CreditCard,
 } from 'lucide-react';
 import { UserSubscription, SubscriptionUsageStats } from '@/types/subscriptionTypes';
 
@@ -17,6 +18,18 @@ export function SubscriptionAlert({ subscription, stats }: SubscriptionAlertProp
   if (!subscription || !stats) return null;
 
   const alerts = [];
+
+  // Check for pending payment
+  if (subscription.paymentStatus === 'pending') {
+    alerts.push({
+      id: 'pending-payment',
+      variant: 'default' as const,
+      icon: CreditCard,
+      title: 'Payment Verification Pending',
+      message: 'Your payment for this subscription is being verified by our team. Some features may be limited until verification is complete.',
+      color: 'amber',
+    });
+  }
 
   // Check for expired subscription
   if (stats.isExpired) {

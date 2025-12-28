@@ -14,6 +14,9 @@ import {
   SubscriptionFilters,
   ApiResponse,
   PaginatedResponse,
+  SubscriptionRequest,
+  CreateSubscriptionRequestDto,
+  UpdateSubscriptionRequestDto,
 } from '../types';
 
 // ==========================================
@@ -40,7 +43,7 @@ export const getAllSubscriptionPlans = async (): Promise<ApiResponse<Subscriptio
 
 export const getActiveSubscriptionPlans = async (): Promise<ApiResponse<SubscriptionPlan[]>> => {
   try {
-    const plans = await apiClient.get<SubscriptionPlan[]>('/subscriptions/plans?isActive=true', { requiresAuth: true });
+    const plans = await apiClient.get<SubscriptionPlan[]>('/subscriptions/plans/active', { requiresAuth: true });
     
     return {
       success: true,
@@ -205,9 +208,10 @@ export const extendUserSubscription = async (
   dto: ExtendSubscriptionDto
 ): Promise<ApiResponse<UserSubscription>> => {
   try {
+    const { userSubscriptionId, ...data } = dto;
     const subscription = await apiClient.put<UserSubscription>(
-      `/subscriptions/${dto.userSubscriptionId}/extend`,
-      { newEndDate: dto.newEndDate, notes: dto.notes }
+      `/subscriptions/${userSubscriptionId}/extend`,
+      data
     );
     
     return {
@@ -220,6 +224,30 @@ export const extendUserSubscription = async (
     throw {
       success: false,
       error: error.message || 'Failed to extend subscription',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+export const continueSubscription = async (
+  dto: Omit<ExtendSubscriptionDto, 'userSubscriptionId'>
+): Promise<ApiResponse<UserSubscription>> => {
+  try {
+    const subscription = await apiClient.put<UserSubscription>(
+      '/subscriptions/continue',
+      dto
+    );
+    
+    return {
+      success: true,
+      data: subscription,
+      message: 'Subscription continued successfully',
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to continue subscription',
       timestamp: new Date().toISOString(),
     };
   }
@@ -397,7 +425,7 @@ export const getFilteredUserSubscriptions = async (
     if (filters.pageSize) params.append('pageSize', filters.pageSize.toString());
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/subscriptions/user?${queryString}` : '/subscriptions/user';
+    const endpoint = queryString ? `/subscriptions/filtered?${queryString}` : '/subscriptions/filtered';
     
     const data = await apiClient.get<PaginatedResponse<UserSubscription>>(endpoint, { requiresAuth: true });
     
@@ -410,6 +438,98 @@ export const getFilteredUserSubscriptions = async (
     throw {
       success: false,
       error: error.message || 'Failed to fetch filtered subscriptions',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+// ==========================================
+// SUBSCRIPTION REQUESTS
+// ==========================================
+
+export const createSubscriptionRequest = async (
+  dto: CreateSubscriptionRequestDto
+): Promise<ApiResponse<SubscriptionRequest>> => {
+  try {
+    const request = await apiClient.post<SubscriptionRequest>('/subscriptions/requests', dto);
+    
+    return {
+      success: true,
+      data: request,
+      message: 'Subscription request submitted successfully',
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to submit subscription request',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+export const getAllSubscriptionRequests = async (
+  filters?: { status?: string; userId?: string }
+): Promise<ApiResponse<SubscriptionRequest[]>> => {
+  try {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.userId) params.append('userId', filters.userId);
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/subscriptions/requests?${queryString}` : '/subscriptions/requests';
+    
+    const requests = await apiClient.get<SubscriptionRequest[]>(endpoint, { requiresAuth: true });
+    
+    return {
+      success: true,
+      data: requests,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to fetch subscription requests',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+export const getMySubscriptionRequests = async (): Promise<ApiResponse<SubscriptionRequest[]>> => {
+  try {
+    const requests = await apiClient.get<SubscriptionRequest[]>('/subscriptions/requests/my', { requiresAuth: true });
+    
+    return {
+      success: true,
+      data: requests,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to fetch your subscription requests',
+      timestamp: new Date().toISOString(),
+    };
+  }
+};
+
+export const updateSubscriptionRequest = async (
+  requestId: string,
+  dto: UpdateSubscriptionRequestDto
+): Promise<ApiResponse<SubscriptionRequest>> => {
+  try {
+    const request = await apiClient.put<SubscriptionRequest>(`/subscriptions/requests/${requestId}`, dto);
+    
+    return {
+      success: true,
+      data: request,
+      message: `Subscription request ${dto.status}`,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to update subscription request',
       timestamp: new Date().toISOString(),
     };
   }

@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Gauge, Calendar, Lock } from 'lucide-react';
+import { MapPin, Gauge, Calendar, Lock, Share2 } from 'lucide-react';
 import { MaskedContent } from '@/components/MaskedContent';
+import { ShareButton } from '@/components/ShareButton';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -18,7 +19,7 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
   const isUnmasked = !!user;
 
   const handleClick = () => {
-    navigate(`/vehicle/${vehicle.id}`);
+    navigate(`/vehicle/${vehicle.id || (vehicle as any)._id}`);
   };
 
   return (
@@ -53,6 +54,17 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
               <PriorityBadge />
             </div>
           )}
+
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ShareButton
+              title={vehicle.title}
+              text={`Check out this ${vehicle.manufacturer} ${vehicle.model} on EduFleet Exchange!`}
+              url={`/vehicle/${vehicle.id || (vehicle as any)._id}`}
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm border-none shadow-sm hover:bg-background"
+            />
+          </div>
         </div>
 
         {/* Content */}

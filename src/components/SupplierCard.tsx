@@ -1,12 +1,14 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, Mail, Phone, MapPin, CheckCircle, Star, MessageCircle, Calendar, Lock } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, CheckCircle, Star, MessageCircle, Calendar, Lock, Share2, Crown } from 'lucide-react';
 import type { Supplier } from '@/api/types';
 import { categoryLabels } from '@/constants/categories';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { MaskedContent } from '@/components/MaskedContent';
+import { ShareButton } from '@/components/ShareButton';
+import toast from 'react-hot-toast';
 
 interface SupplierCardProps {
   supplier: Supplier;
@@ -18,21 +20,39 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAuthenticated = !!user;
+  const isPaid = supplier.isPaid ?? false;
 
-  // Generate rating from supplier data or default
-  const rating = (4.0 + (parseInt(supplier.id.slice(-2), 36) % 10) / 10).toFixed(1);
-  const reviewCount = 50 + (parseInt(supplier.id.slice(-3), 36) % 200);
+  // Handle click on card
+  const handleClick = () => {
+    if (!isPaid && user?.role !== 'admin') {
+      toast.error('Detailed view is only available for featured vendors. Please contact admin for more info.');
+      return;
+    }
+    
+    if (onViewDetails) {
+      onViewDetails();
+    } else {
+      navigate(`/suppliers/${supplier.id || (supplier as any)._id}`);
+    }
+  };
+
+  // Generate rating from supplier data or default - safely handle missing/invalid id
+  const supplierId = supplier?.id || supplier?.name || 'default';
+  const idSuffix = typeof supplierId === 'string' && supplierId.length >= 2 ? supplierId.slice(-2) : '00';
+  const idSuffix3 = typeof supplierId === 'string' && supplierId.length >= 3 ? supplierId.slice(-3) : '000';
+  const rating = (4.0 + (parseInt(idSuffix, 36) % 10) / 10).toFixed(1);
+  const reviewCount = 50 + (parseInt(idSuffix3, 36) % 200);
 
   return (
-    <div className="cursor-pointer relative group flex-shrink-0 w-full h-full">
-      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-xl w-full h-full flex flex-col p-0 bg-card group-hover:border-primary/20">
+    <div className="relative group flex-shrink-0 w-full h-full" onClick={handleClick}>
+      <Card className={`overflow-hidden border border-border/60 shadow-sm transition-all duration-300 rounded-xl w-full h-full flex flex-col p-0 bg-card ${isPaid ? 'hover:shadow-xl hover:-translate-y-1 group-hover:border-primary/20 cursor-pointer' : 'opacity-90 grayscale-[0.5] cursor-default'}`}>
         {/* Top: Image/Logo Section (Hero) */}
         <div className="relative overflow-hidden bg-muted aspect-[4/3] flex-shrink-0">
           {supplier.logo ? (
             <img
               src={supplier.logo}
               alt={supplier.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className={`w-full h-full object-cover transition-transform duration-500 ${isPaid ? 'group-hover:scale-110' : ''}`}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
@@ -43,6 +63,12 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
           {supplier.isVerified && (
             <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg border-2 border-background z-10" title="Verified Supplier">
               <CheckCircle className="w-4 h-4 text-white" />
+            </div>
+          )}
+
+          {isPaid && (
+            <div className="absolute top-2 left-2 bg-amber-500 rounded-full p-1.5 shadow-lg border-2 border-background z-10" title="Featured Vendor">
+              <Crown className="w-4 h-4 text-white" />
             </div>
           )}
 
@@ -62,6 +88,18 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
               </Badge>
             </div>
           )}
+
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ShareButton
+              title={supplier.name}
+              text={`Check out ${supplier.name} on EduFleet Exchange!`}
+              url={`/suppliers/${supplier.id || (supplier as any)._id}`}
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm border-none shadow-sm hover:bg-background"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         </div>
 
         {/* Content */}
@@ -80,10 +118,12 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
                 <span className="text-[10px] text-muted-foreground">({reviewCount} reviews)</span>
               </div>
               
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{supplier.address.city}, {supplier.address.state}</span>
-              </div>
+              {supplier.address && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{supplier.address.city}, {supplier.address.state}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-1">
@@ -98,6 +138,21 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
               )}
             </div>
 
+            {supplier.services && supplier.services.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {supplier.services.slice(0, 2).map((service, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-[9px] px-1 py-0.5">
+                    {service}
+                  </Badge>
+                ))}
+                {supplier.services.length > 2 && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0.5">
+                    +{supplier.services.length - 2} more
+                  </Badge>
+                )}
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
               {supplier.description}
             </p>
@@ -107,7 +162,7 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Phone className="w-3 h-3 flex-shrink-0 text-primary" />
               <span className="font-medium truncate max-w-[120px]">
-                {isAuthenticated ? supplier.phone : (
+                {isAuthenticated && isPaid ? supplier.phone : (
                   <span className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/login'); }}>
                     <span className="blur-sm select-none">+91 99999...</span>
                     <Lock className="w-2.5 h-2.5" />
@@ -119,7 +174,7 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
 
           {/* Actions */}
           <div className="grid grid-cols-2 gap-2 mt-1">
-            {isAuthenticated ? (
+            {isAuthenticated && isPaid ? (
                <>
                 <Button 
                   size="sm" 
@@ -145,6 +200,10 @@ export function SupplierCard({ supplier, onViewDetails, showStatus = false }: Su
                   </a>
                 </Button>
               </>
+            ) : !isPaid ? (
+              <div className="col-span-2 py-2 px-3 bg-muted/50 rounded-lg text-center">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Premium Required for Contact</p>
+              </div>
             ) : (
                <MaskedContent 
                   variant="button" 

@@ -96,7 +96,7 @@ export function VehicleManagement() {
           <h1 className="text-3xl font-bold mb-2">
             {isPendingView ? 'Pending Vehicle Listings' : 'All Vehicle Listings'}
           </h1>
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             {isPendingView 
               ? 'Review and approve new vehicle listings' 
               : 'Manage all vehicle listings and priority status'}
@@ -121,23 +121,23 @@ export function VehicleManagement() {
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-6">
-            <p className="text-sm text-muted mb-2">Total Listings</p>
+            <p className="text-sm text-muted-foreground mb-2">Total Listings</p>
             <div className="text-3xl font-bold text-primary">{allVehicles.length}</div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-muted mb-2">Pending Approval</p>
+            <p className="text-sm text-muted-foreground mb-2">Pending Approval</p>
             <div className="text-3xl font-bold text-accent">
               {allVehicles.filter(v => v.status === 'pending').length}
             </div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-muted mb-2">Approved</p>
+            <p className="text-sm text-muted-foreground mb-2">Approved</p>
             <div className="text-3xl font-bold text-secondary">
               {allVehicles.filter(v => v.status === 'approved').length}
             </div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-muted mb-2">Priority Listings</p>
+            <p className="text-sm text-muted-foreground mb-2">Priority Listings</p>
             <div className="text-3xl font-bold">{priorities.size}</div>
           </Card>
         </div>
@@ -147,8 +147,8 @@ export function VehicleManagement() {
       <Card className="overflow-hidden">
         {displayVehicles.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-muted mb-2">No {isPendingView ? 'pending' : ''} listings found</p>
-            <p className="text-xs text-muted">Listings will appear here as they are submitted</p>
+            <p className="text-muted-foreground mb-2">No {isPendingView ? 'pending' : ''} listings found</p>
+            <p className="text-xs text-muted-foreground">Listings will appear here as they are submitted</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -165,17 +165,17 @@ export function VehicleManagement() {
               </TableHeader>
               <TableBody>
                 {displayVehicles.map((vehicle) => (
-                  <TableRow key={vehicle.id}>
+                  <TableRow key={vehicle.id || (vehicle as any)._id}>
                     <TableCell>
                       <div>
                         <p className="font-medium line-clamp-1">{vehicle.title}</p>
-                        <p className="text-xs text-muted">{vehicle.manufacturer} {vehicle.model}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.model}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <p className="font-medium">{vehicle.sellerName}</p>
-                        <p className="text-xs text-muted">{vehicle.sellerEmail}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.sellerEmail}</p>
                       </div>
                     </TableCell>
                     <TableCell className="font-mono">₹{vehicle.price.toLocaleString()}</TableCell>
@@ -194,14 +194,14 @@ export function VehicleManagement() {
                     </TableCell>
                     <TableCell>
                       <button
-                        onClick={() => handleTogglePriority(vehicle.id)}
+                        onClick={() => handleTogglePriority(vehicle.id || (vehicle as any)._id)}
                         disabled={actionLoading}
                         className="flex items-center gap-2 hover:text-primary smooth-transition disabled:opacity-50"
                         title="Toggle Priority"
                       >
                         <Star
                           className={`w-4 h-4 ${
-                            priorities.has(vehicle.id) ? 'fill-amber-500 text-amber-500' : 'text-muted'
+                            priorities.has(vehicle.id || (vehicle as any)._id) ? 'fill-amber-500 text-amber-500' : 'text-muted-foreground'
                           }`}
                         />
                       </button>

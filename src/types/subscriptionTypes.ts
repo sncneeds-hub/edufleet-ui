@@ -4,8 +4,15 @@ export interface SubscriptionPlan {
   name: string;
   displayName: string;
   description: string;
+  planType: 'teacher' | 'institute' | 'vendor';
   maxBrowseCount: number; // Number of full item detail views per billing period
   maxListingCount: number; // Number of items user can create/list
+  maxJobPosts: number;
+  dataDelayDays: number; // Delay for vehicles and jobs in days
+  teacherDataDelayDays: number; // Delay for teacher profiles in days
+  canAdvertiseVehicles: boolean;
+  instantVehicleAlerts: boolean;
+  instantJobAlerts: boolean;
   listingVisibilityDelayHours: number; // Delay before user sees new listings
   notificationsEnabled: boolean; // Whether notifications are allowed
   isActive: boolean;
@@ -25,9 +32,12 @@ export interface UserSubscription {
   startDate: string;
   endDate: string;
   status: 'active' | 'expired' | 'suspended';
+  paymentStatus: 'pending' | 'completed' | 'failed';
+  transactionId?: string;
   browseCountUsed: number;
   lastBrowseResetAt: string;
   listingCountUsed: number; // Track current listings
+  jobPostsUsed: number;
   assignedBy: string; // Admin user ID who assigned
   notes?: string; // Admin notes
   createdAt: string;
@@ -38,7 +48,20 @@ export interface UserSubscription {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'listing_approved' | 'subscription_expiring' | 'browse_limit_warning' | 'listing_limit_reached' | 'subscription_expired' | 'new_feature' | 'system_alert';
+  type:
+    | 'approval'
+    | 'rejection'
+    | 'priority'
+    | 'message'
+    | 'system'
+    | 'listing_approved'
+    | 'listing_rejected'
+    | 'subscription_expiring'
+    | 'browse_limit_warning'
+    | 'listing_limit_reached'
+    | 'subscription_expired'
+    | 'new_feature'
+    | 'system_alert';
   entityId?: string; // Related vehicle/job ID
   entityType?: 'vehicle' | 'job' | 'supplier';
   title: string;
@@ -66,6 +89,13 @@ export interface SubscriptionUsageStats {
     percentage: number;
     limitReached?: boolean;
   };
+  jobPostsCount: {
+    used: number;
+    allowed: number;
+    remaining: number;
+    percentage: number;
+    limitReached?: boolean;
+  };
   daysRemaining: number;
   isExpiringSoon: boolean; // Less than 7 days
   isExpired: boolean;
@@ -76,8 +106,15 @@ export interface CreateSubscriptionPlanDto {
   name: string;
   displayName: string;
   description: string;
+  planType: 'teacher' | 'institute' | 'vendor';
   maxBrowseCount: number;
   maxListingCount: number;
+  maxJobPosts: number;
+  dataDelayDays: number;
+  teacherDataDelayDays: number;
+  canAdvertiseVehicles: boolean;
+  instantVehicleAlerts: boolean;
+  instantJobAlerts: boolean;
   listingVisibilityDelayHours: number;
   notificationsEnabled: boolean;
   features: string[];
@@ -102,6 +139,8 @@ export interface ExtendSubscriptionDto {
   userSubscriptionId: string;
   newEndDate: string;
   notes?: string;
+  paymentStatus?: 'pending' | 'completed' | 'failed';
+  transactionId?: string;
 }
 
 export interface ResetBrowseCountDto {
@@ -150,6 +189,14 @@ export interface ListingCheckResult {
   message?: string;
 }
 
+export interface JobPostCheckResult {
+  allowed: boolean;
+  remaining: number;
+  limitReached: boolean;
+  subscription: UserSubscription | null;
+  message?: string;
+}
+
 export interface VisibilityCheckResult {
   visible: boolean;
   delayHours: number;
@@ -176,6 +223,45 @@ export interface SubscriptionPlanStats {
   totalRevenue: number;
   averageBrowseUsage: number;
   averageListingUsage: number;
+  averageJobPostUsage: number;
+}
+
+// Subscription Request Types
+export interface SubscriptionRequest {
+  id: string;
+  userId: string;
+  user?: {
+    name: string;
+    email: string;
+    role: string;
+  };
+  currentPlanId: string;
+  currentPlan?: {
+    displayName: string;
+    name: string;
+  };
+  requestedPlanId: string;
+  requestedPlan?: {
+    displayName: string;
+    name: string;
+  };
+  requestType: 'upgrade' | 'downgrade' | 'renewal';
+  status: 'pending' | 'approved' | 'rejected';
+  adminNotes?: string;
+  userNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSubscriptionRequestDto {
+  requestedPlanId: string;
+  requestType: 'upgrade' | 'downgrade' | 'renewal';
+  userNotes?: string;
+}
+
+export interface UpdateSubscriptionRequestDto {
+  status: 'approved' | 'rejected';
+  adminNotes?: string;
 }
 
 // Filters

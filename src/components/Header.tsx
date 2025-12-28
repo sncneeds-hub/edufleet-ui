@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, LayoutDashboard, Megaphone, Bell, Search } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Megaphone, Bell, Search, UserCircle } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -23,15 +23,24 @@ export function Header() {
     navigate('/');
   };
 
-  const handleDashboard = () => {
+  const handleDashboard = (tab?: string) => {
     if (user?.role === 'admin') {
       navigate('/admin');
     } else if (user?.role === 'teacher') {
       navigate('/teacher/dashboard');
-    } else if (user?.role === 'institute') {
-      navigate('/dashboard');
+    } else {
+      // Default to institute dashboard for any other role
+      if (tab === 'profile') {
+        navigate('/dashboard?tab=profile');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
+
+  // Determine which menu items to show based on user role
+  const shouldShowTeacherNav = user?.role === 'teacher';
+  const shouldShowInstituteNav = user?.role === 'institute' || (!user?.role && user);
 
   const handleHeaderSearch = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -80,19 +89,29 @@ export function Header() {
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-6">
             <nav className="flex items-center gap-7 text-sm font-medium">
-              <Link to="/browse" className="text-foreground/70 hover:text-primary transition-all relative group">
-                <span>Vehicles</span>
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
-              </Link>
-              <Link to="/jobs" className="text-foreground/70 hover:text-primary transition-all relative group">
-                <span>Jobs</span>
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
-              </Link>
-              <Link to="/suppliers" className="text-foreground/70 hover:text-primary transition-all relative group">
-                <span>Suppliers</span>
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
-              </Link>
-              <div className="h-5 w-px bg-border/70"></div>
+              {!shouldShowTeacherNav && (
+                <>
+                  <Link to="/browse" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Vehicles</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                  <Link to="/jobs" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Jobs</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                  <Link to="/suppliers" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Suppliers</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                  <div className="h-5 w-px bg-border/70"></div>
+                </>
+              )}
+              {shouldShowTeacherNav && (
+                <Link to="/jobs" className="text-foreground/70 hover:text-primary transition-all relative group">
+                  <span>Browse Jobs</span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                </Link>
+              )}
               <Link to="/advertise" className="flex items-center gap-1.5 text-foreground/70 hover:text-secondary transition-all">
                 <Megaphone className="w-4 h-4" />
                 <span>Advertise</span>
@@ -120,9 +139,13 @@ export function Header() {
                         <div className="text-sm font-semibold text-foreground">{user.name}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">{user.email}</div>
                       </div>
-                      <DropdownMenuItem onClick={handleDashboard} className="cursor-pointer py-2.5 px-3">
+                      <DropdownMenuItem onClick={() => handleDashboard()} className="cursor-pointer py-2.5 px-3">
                         <LayoutDashboard className="w-4 h-4 mr-3" />
                         Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDashboard('profile')} className="cursor-pointer py-2.5 px-3">
+                        <UserCircle className="w-4 h-4 mr-3" />
+                        My Profile
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive py-2.5 px-3">
                         <LogOut className="w-4 h-4 mr-3" />
@@ -162,15 +185,23 @@ export function Header() {
         {mobileMenuOpen && (
           <nav className="lg:hidden mt-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <Link to="/browse" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <span className="font-medium">Vehicles</span>
-              </Link>
-              <Link to="/jobs" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <span className="font-medium">Jobs</span>
-              </Link>
-              <Link to="/suppliers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <span className="font-medium">Suppliers</span>
-              </Link>
+              {!shouldShowTeacherNav ? (
+                <>
+                  <Link to="/browse" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Vehicles</span>
+                  </Link>
+                  <Link to="/jobs" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Jobs</span>
+                  </Link>
+                  <Link to="/suppliers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Suppliers</span>
+                  </Link>
+                </>
+              ) : (
+                <Link to="/jobs" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors col-span-2">
+                  <span className="font-medium">Browse Jobs</span>
+                </Link>
+              )}
               <Link to="/advertise" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                 <span className="font-medium">Advertise</span>
               </Link>

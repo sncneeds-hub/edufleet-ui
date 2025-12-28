@@ -13,6 +13,7 @@ export const API_CONFIG = {
     SIGNUP: '/auth/signup',
     LOGOUT: '/auth/logout',
     ME: '/auth/me',
+    PROFILE: '/auth/profile',
     
     // Vehicles
     VEHICLES: '/vehicles',

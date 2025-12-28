@@ -13,10 +13,13 @@ import { Search, Sliders, Loader2 } from 'lucide-react';
 import { useVehicles } from '@/hooks/useApi';
 import type { Vehicle } from '@/api/types';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { useAuth } from '@/context/AuthContext';
+import { SubscriptionAlert } from '@/components/SubscriptionAlert';
 
 const ALL_FILTER = '__all__';
 
 export function Browse() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('vehicles');
   
   // Vehicle filters
@@ -76,6 +79,10 @@ export function Browse() {
     setConditionFilter(ALL_FILTER);
   };
 
+  // Note: User subscription check removed as it's not yet properly integrated
+  // This will be added when subscription service is fully connected
+  const hasDelay = !user;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -94,6 +101,17 @@ export function Browse() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+            {hasDelay && (
+              <div className="mb-8">
+                <SubscriptionAlert 
+                  type={!user ? 'guest' : 'free'} 
+                  message={!user 
+                    ? "You are browsing as a guest. Login to see newer listings." 
+                    : "You are on a Free plan. You are seeing listings that are at least 10 days old. Upgrade to Professional for instant access."} 
+                />
+              </div>
+            )}
+
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Vehicles Sidebar */}
               <aside className="w-full lg:w-1/4 space-y-6">
@@ -233,7 +251,7 @@ export function Browse() {
                 ) : filteredVehicles.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredVehicles.map((vehicle, index) => (
-                      <div key={vehicle.id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <div key={vehicle.id || (vehicle as any)._id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
                         <VehicleCard vehicle={vehicle} />
                       </div>
                     ))}

@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Filter, Briefcase } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { useAuth } from '@/context/AuthContext';
+import { SubscriptionAlert } from '@/components/SubscriptionAlert';
 import {
   Select,
   SelectContent,
@@ -16,6 +18,7 @@ import {
 } from '@/components/ui/select';
 
 export function JobBrowse() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -44,6 +47,9 @@ export function JobBrowse() {
   };
 
   const hasActiveFilters = searchTerm !== '' || typeFilter !== 'all' || departmentFilter !== 'all';
+  // Note: Subscription check simplified until full integration
+  const isFreePlan = !user;
+  const hasDelay = isFreePlan || !user;
 
   if (loading) {
     return (
@@ -72,15 +78,26 @@ export function JobBrowse() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Browse Job Openings</h1>
-          <p className="text-muted">Discover career opportunities at educational institutes</p>
+          <p className="text-muted-foreground">Discover career opportunities at educational institutes</p>
         </div>
+
+        {hasDelay && (
+          <div className="mb-8">
+            <SubscriptionAlert 
+              type={!user ? 'guest' : 'free'} 
+              message={!user 
+                ? "You are browsing as a guest. Login to see newer job openings." 
+                : "You are on a Free plan. You are seeing jobs that are at least 10 days old. Upgrade to Professional for instant access."} 
+            />
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <aside className="w-full lg:w-1/4 space-y-6">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 type="text"
                 placeholder="Search jobs..."
@@ -150,7 +167,7 @@ export function JobBrowse() {
             {/* Results */}
           <div className="flex-1">
             <div className="mb-6">
-              <p className="text-muted">
+              <p className="text-muted-foreground">
                 Showing <span className="font-semibold text-foreground">{jobs.length}</span> job{jobs.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -158,16 +175,16 @@ export function JobBrowse() {
             {jobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {jobs.map((job, index) => (
-                  <div key={job.id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <div key={job.id || (job as any)._id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
                     <JobCard job={job} />
                   </div>
                 ))}
               </div>
             ) : (
               <Card className="p-12 text-center border-dashed">
-                <Briefcase className="w-12 h-12 text-muted mx-auto mb-4" />
+                <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No jobs found</h3>
-                <p className="text-muted mb-4">Try adjusting your search or filters</p>
+                <p className="text-muted-foreground mb-4">Try adjusting your search or filters</p>
                 <Button
                   variant="outline"
                   onClick={handleClearFilters}
