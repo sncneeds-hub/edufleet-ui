@@ -76,7 +76,7 @@ export function AdminOverview() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Dashboard Overview</h1>
-        <p className="text-muted">Welcome back! Here's what's happening on your platform.</p>
+        <p className="text-muted-foreground">Welcome back! Here's what's happening on your platform.</p>
       </div>
 
       {/* Suggested Action */}
@@ -91,7 +91,7 @@ export function AdminOverview() {
             </div>
             <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-sm text-muted mb-1">Vehicle Listings</p>
+          <p className="text-sm text-muted-foreground mb-1">Vehicle Listings</p>
           <div className="text-3xl font-bold text-primary mb-2">{vehicleStats.total}</div>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-green-600">✓ {vehicleStats.approved} Approved</span>
@@ -106,7 +106,7 @@ export function AdminOverview() {
             </div>
             <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-sm text-muted mb-1">Suppliers</p>
+          <p className="text-sm text-muted-foreground mb-1">Suppliers</p>
           <div className="text-3xl font-bold text-secondary mb-2">{supplierStats.total}</div>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-green-600">✓ {supplierStats.approved} Approved</span>
@@ -121,7 +121,7 @@ export function AdminOverview() {
             </div>
             <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-sm text-muted mb-1">Active Ads</p>
+          <p className="text-sm text-muted-foreground mb-1">Active Ads</p>
           <div className="text-3xl font-bold text-accent mb-2">{activeAds}</div>
           <div className="flex items-center gap-4 text-xs">
             <span className="text-blue-600">📊 {ads.length} Total</span>
@@ -136,9 +136,9 @@ export function AdminOverview() {
             </div>
             <span className="text-xs text-green-600 font-medium">+12%</span>
           </div>
-          <p className="text-sm text-muted mb-1">Platform Growth</p>
+          <p className="text-sm text-muted-foreground mb-1">Platform Growth</p>
           <div className="text-3xl font-bold mb-2">24.5K</div>
-          <div className="text-xs text-muted">Total interactions this month</div>
+          <div className="text-xs text-muted-foreground">Total interactions this month</div>
         </Card>
       </div>
 
@@ -152,7 +152,7 @@ export function AdminOverview() {
           >
             <Car className="w-8 h-8 text-primary mb-2" />
             <h3 className="font-semibold mb-1">Review Vehicles</h3>
-            <p className="text-sm text-muted">{vehicleStats.pending} pending approval</p>
+            <p className="text-sm text-muted-foreground">{vehicleStats.pending} pending approval</p>
           </button>
           
           <button
@@ -161,7 +161,7 @@ export function AdminOverview() {
           >
             <Building2 className="w-8 h-8 text-secondary mb-2" />
             <h3 className="font-semibold mb-1">Review Suppliers</h3>
-            <p className="text-sm text-muted">{supplierStats.pending} pending approval</p>
+            <p className="text-sm text-muted-foreground">{supplierStats.pending} pending approval</p>
           </button>
           
           <button
@@ -170,7 +170,7 @@ export function AdminOverview() {
           >
             <Megaphone className="w-8 h-8 text-accent mb-2" />
             <h3 className="font-semibold mb-1">Manage Ads</h3>
-            <p className="text-sm text-muted">View analytics & approvals</p>
+            <p className="text-sm text-muted-foreground">View analytics & approvals</p>
           </button>
         </div>
       </Card>

@@ -34,9 +34,10 @@ export function Landing() {
       try {
         // Fetch top 4 jobs
         const jobsResponse = await api.jobs.getFeaturedJobs(4);
-        setFeaturedJobs(jobsResponse.data);
+        setFeaturedJobs(jobsResponse.data ?? []);
       } catch (error) {
         console.error('Failed to load jobs:', error);
+        setFeaturedJobs([]);
       } finally {
         setJobsLoading(false);
       }
@@ -44,9 +45,10 @@ export function Landing() {
       try {
         // Fetch top 4 suppliers
         const suppliersResponse = await api.suppliers.getSuppliers({ pageSize: 4, page: 1 });
-        setFeaturedSuppliers(suppliersResponse.data.items);
+        setFeaturedSuppliers(suppliersResponse.data?.items ?? []);
       } catch (error) {
         console.error('Failed to load suppliers:', error);
+        setFeaturedSuppliers([]);
       } finally {
         setSuppliersLoading(false);
       }
@@ -232,7 +234,7 @@ export function Landing() {
             ))
           ) : priorityListings.length > 0 ? (
             priorityListings.slice(0, 4).map((vehicle) => (
-              <div key={vehicle.id} className="h-full">
+              <div key={vehicle.id || (vehicle as any)._id} className="h-full">
                 <VehicleCard vehicle={vehicle} />
               </div>
             ))
@@ -260,9 +262,9 @@ export function Landing() {
               Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="w-full h-[180px] rounded-lg" />
               ))
-            ) : (
+            ) : featuredJobs.length > 0 ? (
               featuredJobs.map((job) => (
-                <div key={job.id} className="h-full">
+                <div key={job.id || (job as any)._id} className="h-full">
                   <JobCard 
                     job={job} 
                     style={{ width: '100%', height: '100%' }} 
@@ -270,6 +272,8 @@ export function Landing() {
                   />
                 </div>
               ))
+            ) : (
+              <p className="text-muted-foreground text-center col-span-full py-8">No jobs available</p>
             )}
           </div>
         </div>
@@ -292,10 +296,12 @@ export function Landing() {
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="w-full h-48 rounded-lg" />
             ))
-          ) : (
+          ) : featuredSuppliers.length > 0 ? (
             featuredSuppliers.map((supplier) => (
-              <SupplierCard key={supplier.id} supplier={supplier} />
+              <SupplierCard key={supplier.id || (supplier as any)._id} supplier={supplier} />
             ))
+          ) : (
+            <p className="text-muted-foreground text-center col-span-full py-8">No suppliers available</p>
           )}
         </div>
       </section>

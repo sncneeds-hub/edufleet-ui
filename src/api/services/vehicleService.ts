@@ -241,15 +241,17 @@ export const vehicleService = {
 
       // Upload to backend
       const response = await apiClient.uploadFiles('/upload/multiple', files, 'images');
+      
+      const urls = response?.urls || (Array.isArray(response) ? response : []);
 
       return {
         success: true,
-        data: response.urls.map((url, index) => ({
+        data: urls.map((url: string, index: number) => ({
           url,
-          filename: files[index].name,
-          size: files[index].size,
+          filename: files[index]?.name || `image-${index}`,
+          size: files[index]?.size || 0,
         })),
-        message: `${files.length} image(s) uploaded successfully`,
+        message: `${urls.length} image(s) uploaded successfully`,
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {

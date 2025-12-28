@@ -220,7 +220,7 @@ export function TeacherJobBrowse() {
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 pt-2">
-                      <Link to={`/job/${job.id || job._id}`} className="flex-1">
+                      <Link to={`/job/${job.id || (job as any)._id}`} className="flex-1">
                         <Button className="w-full">View Details & Apply</Button>
                       </Link>
                     </div>

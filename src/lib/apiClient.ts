@@ -165,7 +165,7 @@ export const apiClient = {
         );
       }
 
-      return data;
+      return data.data || data;
     } catch (error) {
       if (error instanceof APIError) {
         throw error;
@@ -208,7 +208,7 @@ export const apiClient = {
         );
       }
 
-      return data;
+      return data.data || data;
     } catch (error) {
       if (error instanceof APIError) {
         throw error;

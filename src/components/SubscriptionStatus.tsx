@@ -1,40 +1,108 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getUserSubscription, extendUserSubscription, getSubscriptionUsageStats } from '@/api/services/subscriptionService';
+import { 
+  getUserSubscription, 
+  continueSubscription, 
+  getSubscriptionUsageStats, 
+  getActiveSubscriptionPlans,
+  createSubscriptionRequest,
+  getMySubscriptionRequests
+} from '@/api/services/subscriptionService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  AlertTriangle, 
+  ArrowRight, 
+  CreditCard, 
+  Banknote, 
+  Info, 
+  Star,
+  History,
+  Send
+} from 'lucide-react';
 import { useEffect } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { SubscriptionRequest } from '@/types/subscriptionTypes';
 
 export function SubscriptionStatus() {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [continuing, setContinuing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [requestDialog, setRequestDialog] = useState<{
+    open: boolean;
+    plan: any | null;
+    notes: string;
+  }>({
+    open: false,
+    plan: null,
+    notes: '',
+  });
 
   useEffect(() => {
     if (user?.id) {
-      loadSubscription();
+      loadData();
     }
   }, [user?.id]);
 
-  const loadSubscription = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const subscriptionResponse = await getUserSubscription(user!.id);
+      const [subscriptionResponse, statsResponse, plansResponse, requestsResponse] = await Promise.all([
+        getUserSubscription(user!.id),
+        getSubscriptionUsageStats(user!.id),
+        getActiveSubscriptionPlans(),
+        getMySubscriptionRequests()
+      ]);
+
       if (subscriptionResponse.success && subscriptionResponse.data) {
         setSubscription(subscriptionResponse.data);
-        
-        // Also fetch stats
-        const statsResponse = await getSubscriptionUsageStats(user!.id);
-        if (statsResponse.success && statsResponse.data) {
-          setStats(statsResponse.data);
-        }
       }
+      
+      if (statsResponse.success && statsResponse.data) {
+        setStats(statsResponse.data);
+      }
+
+      if (plansResponse.success && plansResponse.data) {
+        const role = user?.role === 'admin' ? 'institute' : user?.role || 'institute';
+        const roleMap: Record<string, string> = {
+          'institute': 'institute',
+          'teacher': 'teacher',
+          'supplier': 'vendor',
+          'vendor': 'vendor'
+        };
+        const planType = roleMap[role];
+        
+        const filteredPlans = plansResponse.data.filter((p: any) => p.planType === planType);
+        setPlans(filteredPlans);
+      }
+
+      if (requestsResponse.success && requestsResponse.data) {
+        setRequests(requestsResponse.data);
+      }
+
     } catch (err) {
       setError('Failed to load subscription details');
       console.error(err);
@@ -43,22 +111,67 @@ export function SubscriptionStatus() {
     }
   };
 
+  const loadSubscription = async () => {
+    await loadData();
+  };
+
   const handleContinueSubscription = async () => {
     if (!subscription) return;
     
     try {
       setContinuing(true);
       setError(null);
-      const response = await extendUserSubscription(subscription.id, { months: 1 });
+      
+      const currentPlanId = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
+      
+      const response = await createSubscriptionRequest({
+        requestedPlanId: currentPlanId,
+        requestType: 'renewal',
+        userNotes: 'Requesting subscription renewal'
+      });
+
       if (response.success) {
-        setSubscription(response.data);
-        await loadSubscription(); // Reload to get fresh stats
+        toast.success('Renewal request submitted successfully! Our team will verify and approve your renewal shortly.');
+        await loadData();
       }
-    } catch (err) {
-      setError('Failed to continue subscription. Please try again.');
+    } catch (err: any) {
+      toast.error(err.error || 'Failed to submit renewal request');
       console.error(err);
     } finally {
       setContinuing(false);
+    }
+  };
+
+  const handleCreateRequest = async () => {
+    if (!requestDialog.plan || !user) return;
+
+    try {
+      setRequesting(true);
+      
+      // Determine request type
+      const currentPlan = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
+      const currentPlanObj = plans.find(p => p.id === currentPlan);
+      
+      let requestType: 'upgrade' | 'downgrade' = 'upgrade';
+      if (currentPlanObj && requestDialog.plan.price < currentPlanObj.price) {
+        requestType = 'downgrade';
+      }
+
+      const response = await createSubscriptionRequest({
+        requestedPlanId: requestDialog.plan.id,
+        requestType,
+        userNotes: requestDialog.notes
+      });
+
+      if (response.success) {
+        toast.success(response.message);
+        setRequestDialog({ open: false, plan: null, notes: '' });
+        await loadData();
+      }
+    } catch (err: any) {
+      toast.error(err.error || 'Failed to submit request');
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -70,6 +183,16 @@ export function SubscriptionStatus() {
       </Card>
     );
   }
+
+  // Helper to check if plan is current
+  const isCurrentPlan = (planId: string) => {
+    const currentPlanId = subscription?.planId?._id || subscription?.planId || subscription?.subscriptionPlanId;
+    return String(currentPlanId) === String(planId);
+  };
+
+  const hasPendingRequest = (planId: string) => {
+    return requests.some(r => r.requestedPlanId === planId && r.status === 'pending');
+  };
 
   if (!subscription) {
     return (
@@ -90,7 +213,7 @@ export function SubscriptionStatus() {
   const isExpired = stats?.isExpired ?? false;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -101,9 +224,12 @@ export function SubscriptionStatus() {
         </Alert>
       )}
 
+      {/* Active Subscription Card */}
       <Card className={`p-6 border-2 ${
         isExpired
           ? 'border-red-200 bg-red-50'
+          : subscription.paymentStatus === 'pending'
+          ? 'border-amber-200 bg-amber-50'
           : isExpiringSoon
           ? 'border-amber-200 bg-amber-50'
           : 'border-green-200 bg-green-50'
@@ -112,6 +238,8 @@ export function SubscriptionStatus() {
           <div className="flex items-start gap-3">
             {isExpired ? (
               <AlertTriangle className="h-6 w-6 text-red-600 mt-1" />
+            ) : subscription.paymentStatus === 'pending' ? (
+              <CreditCard className="h-6 w-6 text-amber-600 mt-1" />
             ) : isExpiringSoon ? (
               <Clock className="h-6 w-6 text-amber-600 mt-1" />
             ) : (
@@ -121,28 +249,51 @@ export function SubscriptionStatus() {
               <h3 className={`font-semibold text-lg ${
                 isExpired
                   ? 'text-red-900'
+                  : subscription.paymentStatus === 'pending'
+                  ? 'text-amber-900'
                   : isExpiringSoon
                   ? 'text-amber-900'
                   : 'text-green-900'
               }`}>
                 {subscription.planName}
               </h3>
-              <p className={`text-sm mt-1 ${
-                isExpired
-                  ? 'text-red-700'
-                  : isExpiringSoon
-                  ? 'text-amber-700'
-                  : 'text-green-700'
-              }`}>
-                Status: <span className="font-medium capitalize">{subscription.status}</span>
-              </p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <p className={`text-sm ${
+                  isExpired
+                    ? 'text-red-700'
+                    : subscription.paymentStatus === 'pending'
+                    ? 'text-amber-700'
+                    : 'text-green-700'
+                }`}>
+                  Status: <span className="font-medium capitalize">{subscription.status}</span>
+                </p>
+                <Badge variant="outline" className={
+                  subscription.paymentStatus === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                  subscription.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200 animate-pulse' :
+                  'bg-red-100 text-red-700 border-red-200'
+                }>
+                  Payment: {subscription.paymentStatus?.toUpperCase() || 'PENDING'}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
 
+        {subscription.paymentStatus === 'pending' && (
+          <Alert className="mb-4 border-amber-200 bg-amber-100/50">
+            <Banknote className="h-4 w-4 text-amber-600" />
+            <div className="ml-4">
+              <p className="font-semibold text-amber-900">Payment Verification Pending</p>
+              <p className="text-sm mt-1 text-amber-800">
+                Your payment for this subscription is being verified. Please contact support if you have already completed the transfer.
+              </p>
+            </div>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div>
-            <p className="text-xs font-medium text-muted uppercase">Days Remaining</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Days Remaining</p>
             <p className={`text-2xl font-bold mt-1 ${
               isExpired
                 ? 'text-red-600'
@@ -154,15 +305,15 @@ export function SubscriptionStatus() {
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium text-muted uppercase">Browse Used</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Browse Used</p>
             <p className="text-2xl font-bold mt-1">{stats?.browseCount?.used ?? 0} / {stats?.browseCount?.allowed ?? 0}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-muted uppercase">Listings Used</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Listings Used</p>
             <p className="text-2xl font-bold mt-1">{stats?.listingCount?.used ?? 0} / {stats?.listingCount?.allowed ?? 0}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-muted uppercase">Valid Until</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Valid Until</p>
             <p className="text-sm font-medium mt-1 break-words">
               {new Date(subscription.endDate).toLocaleDateString()}
             </p>
@@ -205,7 +356,7 @@ export function SubscriptionStatus() {
             {continuing ? 'Processing...' : (
               <>
                 <ArrowRight className="w-4 h-4" />
-                Continue Subscription
+                Request Renewal
               </>
             )}
           </Button>
@@ -217,6 +368,221 @@ export function SubscriptionStatus() {
           >
             Refresh
           </Button>
+        </div>
+      </Card>
+
+      {/* Pending Requests */}
+      {requests.length > 0 && requests.some(r => r.status === 'pending') && (
+        <Card className="p-4 border-amber-200 bg-amber-50">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <h4 className="font-semibold text-amber-900">Pending Requests</h4>
+          </div>
+          <div className="space-y-2">
+            {requests.filter(r => r.status === 'pending').map(request => (
+              <div key={request.id} className="text-sm flex justify-between items-center bg-white/50 p-2 rounded border border-amber-100">
+                <div>
+                  <span className="font-medium capitalize">{request.requestType}</span> to <span className="font-bold">{request.requestedPlan?.displayName}</span>
+                  <p className="text-xs text-muted-foreground">Requested on {new Date(request.createdAt).toLocaleDateString()}</p>
+                </div>
+                <Badge variant="outline" className="bg-amber-100 text-amber-700">Pending Admin Approval</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Available Plans Section */}
+      {plans.length > 0 && (
+        <div>
+          <h3 className="text-xl font-bold mb-4">Plan Options</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.map((plan) => {
+              const current = isCurrentPlan(plan.id);
+              const pending = hasPendingRequest(plan.id);
+              
+              const currentPlanObj = plans.find(p => isCurrentPlan(p.id));
+              const isUpgrade = currentPlanObj ? plan.price > currentPlanObj.price : true;
+              
+              return (
+                <Card key={plan.id} className={`p-6 flex flex-col ${current ? 'border-primary ring-1 ring-primary' : ''}`}>
+                  <div className="mb-4">
+                    <h4 className="font-bold text-lg">{plan.displayName}</h4>
+                    <p className="text-2xl font-bold mt-2">
+                      {plan.price === 0 ? 'Free' : `₹${plan.price.toLocaleString()}`}
+                      <span className="text-sm font-normal text-muted-foreground ml-1">/{plan.duration} days</span>
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                  </div>
+                  
+                  <div className="space-y-2 mb-6 flex-1">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>{plan.features.maxListings === 0 ? 'No listings' : `${plan.features.maxListings} Listings`}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>{plan.features.maxBrowsesPerMonth} Browse Views</span>
+                    </div>
+                    {plan.features.priorityListings && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Star className="w-4 h-4 text-amber-500" />
+                        <span>Priority Listings</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {current ? (
+                    <Button disabled className="w-full" variant="outline">Current Plan</Button>
+                  ) : pending ? (
+                    <Button disabled className="w-full bg-amber-50 text-amber-600 border-amber-200" variant="outline">
+                      Request Pending
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="w-full" 
+                      onClick={() => {
+                        setRequestDialog({ open: true, plan, notes: '' });
+                      }}
+                      variant={isUpgrade ? "default" : "outline"}
+                    >
+                      {isUpgrade ? 'Request Upgrade' : 'Request Downgrade'}
+                    </Button>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Request History */}
+      {requests.length > 0 && requests.some(r => r.status !== 'pending') && (
+        <div>
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Request History
+          </h3>
+          <Card className="p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted text-muted-foreground border-b">
+                    <th className="text-left p-3 font-medium">Type</th>
+                    <th className="text-left p-3 font-medium">Requested Plan</th>
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {requests.filter(r => r.status !== 'pending').slice(0, 5).map(request => (
+                    <tr key={request.id}>
+                      <td className="p-3 capitalize">{request.requestType}</td>
+                      <td className="p-3 font-medium">{request.requestedPlan?.displayName}</td>
+                      <td className="p-3 text-muted-foreground">{new Date(request.createdAt).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <Badge variant="outline" className={
+                          request.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                          'bg-red-50 text-red-700 border-red-200'
+                        }>
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-muted-foreground max-w-[200px] truncate" title={request.adminNotes}>
+                        {request.adminNotes || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Request Dialog */}
+      <Dialog open={requestDialog.open} onOpenChange={(open) => setRequestDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Subscription Change</DialogTitle>
+            <DialogDescription>
+              Submit a request to {requestDialog.plan?.price > (plans.find(p => isCurrentPlan(p.id))?.price || 0) ? 'upgrade' : 'downgrade'} your plan to <strong>{requestDialog.plan?.displayName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Additional Notes (Optional)</label>
+              <Textarea 
+                placeholder="Explain why you'd like to change your plan..." 
+                value={requestDialog.notes}
+                onChange={(e) => setRequestDialog(prev => ({ ...prev, notes: e.target.value }))}
+                className="h-24"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestDialog({ open: false, plan: null, notes: '' })}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateRequest} disabled={requesting} className="gap-2">
+              {requesting ? 'Submitting...' : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Submit Request
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Card id="payment-instructions" className="p-6 border-blue-200 bg-blue-50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Banknote className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-blue-900">Payment Instructions</h3>
+            <p className="text-sm text-blue-700">How to pay for your subscription</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-4 bg-white/50 rounded-lg border border-blue-100 space-y-2">
+            <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Bank Transfer Details</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground text-[10px] uppercase">Account Name</p>
+                <p className="font-medium">EduFleet Exchange Pvt Ltd</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[10px] uppercase">Bank Name</p>
+                <p className="font-medium">HDFC Bank</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[10px] uppercase">Account Number</p>
+                <p className="font-mono font-bold text-lg tracking-wider">50200012345678</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[10px] uppercase">IFSC Code</p>
+                <p className="font-mono font-bold text-lg tracking-wider">HDFC0001234</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 p-4 bg-white/50 rounded-lg border border-blue-100">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-sm space-y-2">
+              <p className="font-medium text-blue-900">Important Note:</p>
+              <ul className="list-disc ml-4 space-y-1 text-blue-800">
+                <li>Make the payment to the above account.</li>
+                <li>Take a screenshot of the transaction.</li>
+                <li>Send the screenshot along with your <strong>User ID</strong> to <span className="font-bold underline">payments@edufleet.com</span> or WhatsApp at <span className="font-bold underline">+91 9876543210</span>.</li>
+                <li>Admin will verify and update your subscription within 24 hours.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </Card>
     </div>

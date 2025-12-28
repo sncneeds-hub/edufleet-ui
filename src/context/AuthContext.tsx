@@ -22,6 +22,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string, instituteName: string, contactPerson: string, instituteCode: string, phone: string, otp?: string) => Promise<void>;
   signupTeacher: (data: TeacherSignupData) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
   getToken: () => string | null;
   refreshToken: () => Promise<void>;
@@ -107,12 +108,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signupTeacher = async (data: TeacherSignupData) => {
     try {
       setIsLoading(true);
-      const response = await authService.signup({
+      const response = await authService.signupTeacher({
         name: data.name,
         email: data.email,
         password: data.password,
-        role: 'teacher',
         phone: data.phone,
+        qualifications: data.qualifications,
+        experience: data.experience,
+        subjects: data.subjects,
+        bio: data.bio,
+        location: data.location,
       });
       setUser(response.user);
       toast.success('Teacher signup successful');
@@ -129,16 +134,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      // Update user locally
-      const updatedUser = { ...user, ...data };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      const response = await authService.updateProfile(data);
+      setUser(response);
+      localStorage.setItem('user', JSON.stringify(response));
       
       toast.success('Profile updated successfully');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Update failed';
       toast.error(message);
       throw error;
+    }
+  };
+
+  const refreshProfile = async () => {
+    try {
+      const profile = await authService.getProfile();
+      setUser(profile);
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch (error) {
+      console.error('Failed to refresh profile:', error);
     }
   };
 
@@ -182,6 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signup, 
       signupTeacher, 
       updateProfile, 
+      refreshProfile,
       logout,
       getToken,
       refreshToken

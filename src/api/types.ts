@@ -59,7 +59,7 @@ export interface Vehicle {
   permit?: {
     valid: boolean;
     expiryDate?: string;
-    type?: string;
+    permitType?: string;
   };
 }
 
@@ -109,7 +109,7 @@ export interface CreateVehicleDto {
   permit?: {
     valid: boolean;
     expiryDate?: string;
-    type?: string;
+    permitType?: string;
   };
 }
 
@@ -121,7 +121,7 @@ export interface UpdateVehicleDto extends Partial<CreateVehicleDto> {
 export interface LoginRequest {
   email: string;
   password: string;
-  role: 'institute' | 'admin';
+  role: 'institute' | 'admin' | 'teacher';
 }
 
 export interface SignupRequest {
@@ -136,10 +136,17 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'guest' | 'institute' | 'admin';
+  role: 'guest' | 'institute' | 'admin' | 'teacher';
   instituteName?: string;
   contactPerson?: string;
   avatar?: string;
+  phone?: string;
+  location?: string;
+  experience?: number;
+  qualifications?: string[];
+  subjects?: string[];
+  bio?: string;
+  isAvailable?: boolean;
 }
 
 export interface AuthResponse {
@@ -209,6 +216,7 @@ export interface Supplier {
   yearsInBusiness?: number;
   clientCount?: number;
   isVerified: boolean;
+  isPaid?: boolean;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   updatedAt: string;
@@ -279,4 +287,7 @@ export type {
   SubscriptionPlanStats,
   SubscriptionFilters,
   NotificationFilters,
+  SubscriptionRequest,
+  CreateSubscriptionRequestDto,
+  UpdateSubscriptionRequestDto,
 } from '../types/subscriptionTypes';

@@ -4,27 +4,19 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
 
-export function Login() {
+export function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'institute' | 'admin' | 'teacher'>('institute');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handlePasswordLogin = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -36,16 +28,10 @@ export function Login() {
     }
 
     try {
-      await login(email, password, role);
-      if (role === 'admin') {
-        navigate('/admin');
-      } else if (role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      await login(email, password, 'admin');
+      navigate('/admin');
     } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      setError('Invalid email or password. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -58,31 +44,29 @@ export function Login() {
         <div className="mb-6">
           <AdSlot placement="LP_TOP_BANNER" variant="banner" />
         </div>
-        {/* Logo */}
+
+        {/* Logo & Title */}
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="bg-primary/10 p-3 rounded-lg">
+              <ShieldCheck className="w-8 h-8 text-primary" />
+            </div>
+          </div>
           <h1 className="text-3xl font-bold mb-2">
             EduFleet<span className="text-primary">Exchange</span>
           </h1>
-          <p className="text-muted-foreground">Sign in to your account</p>
+          <p className="text-muted-foreground">Admin Portal</p>
         </div>
 
         <Card className="p-8 border-border">
-          <form onSubmit={handlePasswordLogin} className="space-y-6">
-            {/* Role Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Login As</label>
-              <Select value={role} onValueChange={(value: any) => setRole(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="institute">Institute</SelectItem>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700 font-medium">Admin Access Only</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Please enter your admin credentials to access the admin dashboard.
+            </p>
+          </div>
 
+          <form onSubmit={handleAdminLogin} className="space-y-6">
             {/* Email */}
             <div>
               <label className="text-sm font-medium mb-2 block">Email Address</label>
@@ -90,11 +74,12 @@ export function Login() {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="email"
-                  placeholder="your@institute.edu.in"
+                  placeholder="admin@edufleet.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -111,6 +96,7 @@ export function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
                   disabled={loading}
+                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -129,16 +115,17 @@ export function Login() {
               disabled={loading}
             >
               <LogIn className="w-4 h-4" />
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Logging in...' : 'Login as Admin'}
             </Button>
           </form>
 
           {/* Demo Credentials */}
-          <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-            <p className="font-medium mb-1">Demo Instructions:</p>
-            <p>1. Select your role (Institute, Teacher, or Admin)</p>
-            <p>2. Sign up first to create an account</p>
-            <p>3. Use your credentials to login</p>
+          <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+            <p className="font-medium mb-2">Demo Admin Account:</p>
+            <div className="space-y-1 font-mono text-xs">
+              <p>Email: <span className="text-amber-900">admin@edufleet.com</span></p>
+              <p>Password: <span className="text-amber-900">admin123</span></p>
+            </div>
           </div>
 
           {/* Divider */}
@@ -151,18 +138,18 @@ export function Login() {
             </div>
           </div>
 
-          {/* Signup Links */}
+          {/* Other Login Links */}
           <div className="text-center text-sm space-y-2">
             <p className="text-muted-foreground">
-              Don't have an account?
+              Not an admin?
             </p>
-            <div className="flex gap-2 justify-center">
-              <Link to="/signup" className="text-primary hover:underline font-medium">
-                Institute Signup
+            <div className="flex gap-2 justify-center flex-wrap">
+              <Link to="/login" className="text-primary hover:underline font-medium">
+                Regular Login
               </Link>
               <span className="text-muted-foreground">•</span>
-              <Link to="/teacher/signup" className="text-primary hover:underline font-medium">
-                Teacher Signup
+              <Link to="/" className="text-primary hover:underline font-medium">
+                Home
               </Link>
             </div>
           </div>

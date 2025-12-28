@@ -52,10 +52,18 @@ export function SupplierBrowse() {
     try {
       setLoading(true);
       const response = await getSuppliers({ ...filters, status: 'approved' });
-      setSuppliers(response.data.items);
+      // Handle both paginated and array responses
+      if (response.data && Array.isArray(response.data.items)) {
+        setSuppliers(response.data.items);
+      } else if (Array.isArray(response.data)) {
+        setSuppliers(response.data);
+      } else {
+        setSuppliers([]);
+      }
     } catch (error) {
       toast.error('Failed to load suppliers');
       console.error(error);
+      setSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -228,7 +236,7 @@ export function SupplierBrowse() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {suppliers.map((supplier, index) => (
-                    <div key={supplier.id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <div key={supplier.id || (supplier as any)._id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
                       <SupplierCard
                         supplier={supplier}
                         onViewDetails={() => setSelectedSupplier(supplier)}
@@ -284,13 +292,13 @@ export function SupplierBrowse() {
                 <div className="flex items-center gap-6 text-sm">
                   {selectedSupplier.yearsInBusiness && (
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted" />
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span>{selectedSupplier.yearsInBusiness} years in business</span>
                     </div>
                   )}
                   {selectedSupplier.clientCount && (
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted" />
+                      <Users className="w-4 h-4 text-muted-foreground" />
                       <span>{selectedSupplier.clientCount}+ clients</span>
                     </div>
                   )}
@@ -299,20 +307,22 @@ export function SupplierBrowse() {
                 {/* Description */}
                 <div>
                   <h4 className="font-semibold mb-2">About</h4>
-                  <p className="text-sm text-muted">{selectedSupplier.description}</p>
+                  <p className="text-sm text-muted-foreground">{selectedSupplier.description}</p>
                 </div>
 
                 {/* Services */}
-                <div>
-                  <h4 className="font-semibold mb-2">Services Offered</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSupplier.services.map((service, idx) => (
-                      <Badge key={idx} variant="secondary">
-                        {service}
-                      </Badge>
-                    ))}
+                {selectedSupplier.services && selectedSupplier.services.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Services Offered</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSupplier.services.map((service, idx) => (
+                        <Badge key={idx} variant="secondary">
+                          {service}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Certifications */}
                 {selectedSupplier.certifications && selectedSupplier.certifications.length > 0 && (
@@ -336,11 +346,11 @@ export function SupplierBrowse() {
                   <h4 className="font-semibold mb-3">Contact Information</h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted mb-1">Contact Person</p>
+                      <p className="text-xs text-muted-foreground mb-1">Contact Person</p>
                       <p className="text-sm font-medium">{selectedSupplier.contactPerson}</p>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-4 h-4 text-muted flex-shrink-0" />
+                      <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <a
                         href={`mailto:${selectedSupplier.email}`}
                         className="hover:text-primary smooth-transition"
@@ -349,7 +359,7 @@ export function SupplierBrowse() {
                       </a>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4 text-muted flex-shrink-0" />
+                      <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <a
                         href={`tel:${selectedSupplier.phone}`}
                         className="hover:text-primary smooth-transition"
@@ -359,7 +369,7 @@ export function SupplierBrowse() {
                     </div>
                     {selectedSupplier.website && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Globe className="w-4 h-4 text-muted flex-shrink-0" />
+                        <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <a
                           href={selectedSupplier.website}
                           target="_blank"
@@ -379,7 +389,7 @@ export function SupplierBrowse() {
                     <MapPin className="w-4 h-4 text-primary" />
                     Address
                   </h4>
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-muted-foreground">
                     {selectedSupplier.address.street}
                     <br />
                     {selectedSupplier.address.city}, {selectedSupplier.address.state}{' '}

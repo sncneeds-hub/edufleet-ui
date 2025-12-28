@@ -4,9 +4,38 @@ import { useNavigate } from 'react-router-dom';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Briefcase, Building2, Clock, DollarSign } from 'lucide-react';
+import { MapPin, Briefcase, Building2, Clock, DollarSign, Share2 } from 'lucide-react';
 import { MaskedContent } from '@/components/MaskedContent';
 import { Badge } from '@/components/ui/badge';
+import { ShareButton } from '@/components/ShareButton';
+
+// Helper function to format location
+const formatLocation = (location: any): string => {
+  if (!location) return 'Location not specified';
+  if (typeof location === 'string') return location;
+  if (typeof location === 'object') {
+    const parts = [location.city, location.state, location.country].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+  }
+  return String(location);
+};
+
+// Helper function to format salary
+const formatSalary = (salary: any): { min: number; max: number } => {
+  if (!salary) return { min: 0, max: 0 };
+  if (typeof salary === 'object' && salary !== null) {
+    return { 
+      min: salary.min || salary.salaryMin || 0, 
+      max: salary.max || salary.salaryMax || 0 
+    };
+  }
+  // Handle string salary like "50000-70000"
+  if (typeof salary === 'string') {
+    const parts = salary.split('-').map(s => parseInt(s.replace(/[^0-9]/g, '')) || 0);
+    return { min: parts[0] || 0, max: parts[1] || parts[0] || 0 };
+  }
+  return { min: 0, max: 0 };
+};
 
 interface JobCardProps {
   job: Job;
@@ -21,7 +50,7 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
   const isUnmasked = !!user;
 
   const handleClick = () => {
-    navigate(`/job/${job.id}`);
+    navigate(`/job/${job.id || (job as any)._id}`);
   };
 
   return (
@@ -45,6 +74,17 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
              <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/50">
                {job.type}
              </Badge>
+          </div>
+
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ShareButton
+              title={job.title}
+              text={`Check out this ${job.title} position at ${job.instituteName} on EduFleet Exchange!`}
+              url={`/job/${job.id || (job as any)._id}`}
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm border-none shadow-sm hover:bg-background"
+            />
           </div>
         </div>
 
@@ -71,7 +111,7 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
                 </div>
                 <div className="flex items-center gap-1">
                   <MapPin className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{job.location}</span>
+                  <span className="truncate">{formatLocation(job.location)}</span>
                 </div>
               </div>
             </div>
@@ -96,7 +136,10 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
               <DollarSign className="w-4 h-4" />
               {isUnmasked || isListing ? (
                 <span className="truncate">
-                  {(job.salary.min / 1000).toFixed(0)}k - {(job.salary.max / 1000).toFixed(0)}k
+                  {(() => {
+                    const salary = formatSalary(job.salary);
+                    return `${(salary.min / 1000).toFixed(0)}k - ${(salary.max / 1000).toFixed(0)}k`;
+                  })()}
                   <span className="text-muted-foreground font-normal text-xs ml-1">/yr</span>
                 </span>
               ) : (

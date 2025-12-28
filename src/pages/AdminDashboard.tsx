@@ -177,7 +177,7 @@ export function AdminDashboard() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p className="text-muted mb-6">Only admins can access this page</p>
+        <p className="text-muted-foreground mb-6">Only admins can access this page</p>
         <Button onClick={() => navigate('/')}>Go to Home</Button>
       </div>
     );
@@ -280,7 +280,7 @@ export function AdminDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted">Manage listings, approvals, and featured items</p>
+          <p className="text-muted-foreground">Manage listings, approvals, and featured items</p>
         </div>
 
         {/* Suggested Action */}
@@ -290,19 +290,19 @@ export function AdminDashboard() {
         {activeTab.startsWith('vehicles') && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Total Listings</p>
+              <p className="text-sm text-muted-foreground mb-2">Total Listings</p>
               <div className="text-3xl font-bold text-primary">{allListings.length}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Pending Approval</p>
+              <p className="text-sm text-muted-foreground mb-2">Pending Approval</p>
               <div className="text-3xl font-bold text-accent">{vehicleStats.pending}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Approved</p>
+              <p className="text-sm text-muted-foreground mb-2">Approved</p>
               <div className="text-3xl font-bold text-secondary">{allListings.filter(v => v.status === 'approved').length}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Priority Listings</p>
+              <p className="text-sm text-muted-foreground mb-2">Priority Listings</p>
               <div className="text-3xl font-bold">{priorities.size}</div>
             </Card>
           </div>
@@ -311,23 +311,23 @@ export function AdminDashboard() {
         {activeTab.startsWith('suppliers') && (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Total Suppliers</p>
+              <p className="text-sm text-muted-foreground mb-2">Total Suppliers</p>
               <div className="text-3xl font-bold text-primary">{supplierStats.total}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Pending</p>
+              <p className="text-sm text-muted-foreground mb-2">Pending</p>
               <div className="text-3xl font-bold text-accent">{supplierStats.pending}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Approved</p>
+              <p className="text-sm text-muted-foreground mb-2">Approved</p>
               <div className="text-3xl font-bold text-secondary">{supplierStats.approved}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Verified</p>
+              <p className="text-sm text-muted-foreground mb-2">Verified</p>
               <div className="text-3xl font-bold text-green-600">{supplierStats.verified}</div>
             </Card>
             <Card className="p-6">
-              <p className="text-sm text-muted mb-2">Rejected</p>
+              <p className="text-sm text-muted-foreground mb-2">Rejected</p>
               <div className="text-3xl font-bold text-red-600">{supplierStats.rejected}</div>
             </Card>
           </div>
@@ -341,7 +341,7 @@ export function AdminDashboard() {
               className={`px-4 py-2 font-medium border-b-2 smooth-transition ${
                 activeTab === 'vehicles-pending'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Vehicle Pending ({pendingListings.length})
@@ -351,7 +351,7 @@ export function AdminDashboard() {
               className={`px-4 py-2 font-medium border-b-2 smooth-transition ${
                 activeTab === 'vehicles-all'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               All Vehicles
@@ -361,7 +361,7 @@ export function AdminDashboard() {
               className={`px-4 py-2 font-medium border-b-2 smooth-transition flex items-center gap-2 ${
                 activeTab === 'suppliers-pending'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Building2 className="w-4 h-4" />
@@ -372,7 +372,7 @@ export function AdminDashboard() {
               className={`px-4 py-2 font-medium border-b-2 smooth-transition flex items-center gap-2 ${
                 activeTab === 'suppliers-all'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Building2 className="w-4 h-4" />
@@ -380,7 +380,7 @@ export function AdminDashboard() {
             </button>
             <button
               onClick={() => navigate('/admin/ads')}
-              className={`px-4 py-2 font-medium border-b-2 smooth-transition flex items-center gap-2 border-transparent text-muted hover:text-foreground`}
+              className={`px-4 py-2 font-medium border-b-2 smooth-transition flex items-center gap-2 border-transparent text-muted-foreground hover:text-foreground`}
             >
               <Megaphone className="w-4 h-4" />
               Ads Management
@@ -390,7 +390,7 @@ export function AdminDashboard() {
               className={`px-4 py-2 font-medium border-b-2 smooth-transition flex items-center gap-2 ${
                 activeTab === 'settings'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -430,8 +430,8 @@ export function AdminDashboard() {
           <Card className="overflow-hidden">
             {(activeTab === 'vehicles-pending' ? pendingListings : allListings).length === 0 ? (
               <div className="p-8 text-center">
-                <p className="text-muted mb-2">No {activeTab === 'vehicles-pending' ? 'pending' : ''} listings found</p>
-                <p className="text-xs text-muted">Listings will appear here as they are submitted</p>
+                <p className="text-muted-foreground mb-2">No {activeTab === 'vehicles-pending' ? 'pending' : ''} listings found</p>
+                <p className="text-xs text-muted-foreground">Listings will appear here as they are submitted</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -448,17 +448,17 @@ export function AdminDashboard() {
                   </TableHeader>
                   <TableBody>
                     {(activeTab === 'vehicles-pending' ? pendingListings : allListings).map((vehicle) => (
-                      <TableRow key={vehicle.id}>
+                      <TableRow key={vehicle.id || (vehicle as any)._id}>
                         <TableCell>
                           <div>
                             <p className="font-medium line-clamp-1">{vehicle.title}</p>
-                            <p className="text-xs text-muted">{vehicle.manufacturer} {vehicle.model}</p>
+                            <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.model}</p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             <p className="font-medium">{vehicle.sellerName}</p>
-                            <p className="text-xs text-muted">{vehicle.sellerEmail}</p>
+                            <p className="text-xs text-muted-foreground">{vehicle.sellerEmail}</p>
                           </div>
                         </TableCell>
                         <TableCell className="font-mono">₹{vehicle.price.toLocaleString()}</TableCell>
@@ -477,13 +477,13 @@ export function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <button
-                            onClick={() => togglePriority(vehicle.id)}
+                            onClick={() => togglePriority(vehicle.id || (vehicle as any)._id)}
                             className="flex items-center gap-2 hover:text-primary smooth-transition"
                             title="Toggle Priority"
                           >
                             <Star
                               className={`w-4 h-4 ${
-                                priorities.has(vehicle.id) ? 'fill-amber-500 text-amber-500' : 'text-muted'
+                                priorities.has(vehicle.id || (vehicle as any)._id) ? 'fill-amber-500 text-amber-500' : 'text-muted-foreground'
                               }`}
                             />
                           </button>
@@ -495,7 +495,7 @@ export function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleApprove(vehicle.id)}
+                                  onClick={() => handleApprove(vehicle.id || (vehicle as any)._id)}
                                   className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                   title="Approve"
                                 >
@@ -504,7 +504,7 @@ export function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleReject(vehicle.id)}
+                                  onClick={() => handleReject(vehicle.id || (vehicle as any)._id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                   title="Reject"
                                 >
@@ -526,13 +526,13 @@ export function AdminDashboard() {
             {isLoadingSuppliers ? (
               <Card className="p-12 text-center">
                 <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                <p className="text-muted mt-4">Loading suppliers...</p>
+                <p className="text-muted-foreground mt-4">Loading suppliers...</p>
               </Card>
             ) : suppliers.length === 0 ? (
               <Card className="p-12 text-center">
-                <Building2 className="w-12 h-12 text-muted mx-auto mb-4" />
-                <p className="text-muted mb-2">No suppliers found</p>
-                <p className="text-xs text-muted mb-4">Add suppliers to help institutes find service providers</p>
+                <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">No suppliers found</p>
+                <p className="text-xs text-muted-foreground mb-4">Add suppliers to help institutes find service providers</p>
                 <Button onClick={() => setShowAddSupplier(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add First Supplier
@@ -541,7 +541,7 @@ export function AdminDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {suppliers.map(supplier => (
-                  <div key={supplier.id} className="relative">
+                  <div key={supplier.id || (supplier as any)._id} className="relative">
                     <SupplierCard supplier={supplier} showStatus />
                     <div className="absolute top-3 right-3 flex gap-2">
                       {supplier.status === 'pending' && (
@@ -549,7 +549,7 @@ export function AdminDashboard() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleApproveSupplier(supplier.id)}
+                            onClick={() => handleApproveSupplier(supplier.id || (supplier as any)._id)}
                             className="bg-white shadow-sm hover:bg-green-50 text-green-600"
                             title="Approve"
                           >
@@ -558,7 +558,7 @@ export function AdminDashboard() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleRejectSupplier(supplier.id)}
+                            onClick={() => handleRejectSupplier(supplier.id || (supplier as any)._id)}
                             className="bg-white shadow-sm hover:bg-red-50 text-red-600"
                             title="Reject"
                           >
@@ -570,7 +570,7 @@ export function AdminDashboard() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleToggleVerification(supplier.id)}
+                          onClick={() => handleToggleVerification(supplier.id || (supplier as any)._id)}
                           className={`bg-white shadow-sm ${
                             supplier.isVerified
                               ? 'text-green-600 hover:bg-green-50'

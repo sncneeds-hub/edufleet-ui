@@ -94,23 +94,23 @@ export function JobDetails() {
                     <h1 className="text-2xl font-bold">{job.title}</h1>
                     {job.isPriority && <PriorityBadge />}
                   </div>
-                  <p className="text-muted mb-4">{job.instituteName}</p>
+                  <p className="text-muted-foreground mb-4">{job.instituteName}</p>
                   
                   <div className="flex flex-wrap gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted" />
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span>{job.location}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-muted" />
+                      <Briefcase className="w-4 h-4 text-muted-foreground" />
                       <span>{job.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-muted" />
+                      <Clock className="w-4 h-4 text-muted-foreground" />
                       <span>{job.experience}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted" />
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span>Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -126,7 +126,7 @@ export function JobDetails() {
                 {isUnmasked ? (
                   <div className="text-2xl font-bold text-primary">
                     {job.salary.currency}{(job.salary.min / 1000).toFixed(0)}k - {job.salary.currency}{(job.salary.max / 1000).toFixed(0)}k
-                    <span className="text-sm font-normal text-muted ml-2">/month</span>
+                    <span className="text-sm font-normal text-muted-foreground ml-2">/month</span>
                   </div>
                 ) : (
                   <MaskedContent 
@@ -143,7 +143,7 @@ export function JobDetails() {
             {/* Description */}
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Job Description</h2>
-              <p className="text-muted leading-relaxed">{job.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{job.description}</p>
             </Card>
 
             {/* Requirements */}
@@ -153,7 +153,7 @@ export function JobDetails() {
                 {job.requirements.map((req, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-muted">{req}</span>
+                    <span className="text-muted-foreground">{req}</span>
                   </li>
                 ))}
               </ul>
@@ -166,7 +166,7 @@ export function JobDetails() {
                 {job.responsibilities.map((resp, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
-                    <span className="text-muted">{resp}</span>
+                    <span className="text-muted-foreground">{resp}</span>
                   </li>
                 ))}
               </ul>
@@ -180,7 +180,7 @@ export function JobDetails() {
                   {job.benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                      <span className="text-muted">{benefit}</span>
+                      <span className="text-muted-foreground">{benefit}</span>
                     </li>
                   ))}
                 </ul>
@@ -207,26 +207,26 @@ export function JobDetails() {
 
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <Building className="w-5 h-5 text-muted" />
+                  <Building className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted">Department</p>
+                    <p className="text-sm text-muted-foreground">Department</p>
                     <p className="font-medium">{job.department}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-muted" />
+                  <Calendar className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted">Deadline</p>
+                    <p className="text-sm text-muted-foreground">Deadline</p>
                     <p className="font-medium">{new Date(job.deadline).toLocaleDateString()}</p>
                   </div>
                 </div>
 
                 {isUnmasked && job.applicants !== undefined && (
                   <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 text-muted" />
+                    <Users className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted">Applicants</p>
+                      <p className="text-sm text-muted-foreground">Applicants</p>
                       <p className="font-medium">{job.applicants} applied</p>
                     </div>
                   </div>
@@ -245,13 +245,13 @@ export function JobDetails() {
                 <h4 className="font-medium text-sm">Contact Information</h4>
                 {isUnmasked ? (
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Mail className="w-4 h-4" />
                       <a href={`mailto:${job.instituteEmail}`} className="hover:text-primary">
                         {job.instituteEmail}
                       </a>
                     </div>
-                    <div className="flex items-center gap-2 text-muted">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="w-4 h-4" />
                       <a href={`tel:${job.institutePhone}`} className="hover:text-primary">
                         {job.institutePhone}

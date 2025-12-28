@@ -34,7 +34,7 @@ export function AdminLayout() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p className="text-muted mb-6">Only admins can access this page</p>
+        <p className="text-muted-foreground mb-6">Only admins can access this page</p>
         <Button onClick={() => navigate('/')}>Go to Home</Button>
       </div>
     );

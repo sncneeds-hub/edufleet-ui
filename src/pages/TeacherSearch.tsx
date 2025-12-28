@@ -33,13 +33,16 @@ import {
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { useAuth } from '@/context/AuthContext';
+import { SubscriptionAlert } from '@/components/SubscriptionAlert';
 
 export function TeacherSearch() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [experienceFilter, setExperienceFilter] = useState<string>('all');
-  const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>('available');
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [interviewData, setInterviewData] = useState({
@@ -98,6 +101,10 @@ export function TeacherSearch() {
     setSelectedTeacher(null);
   };
 
+  // Note: Subscription check simplified until full integration
+  const isFreePlan = !user;
+  const hasDelay = isFreePlan || !user;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -113,6 +120,17 @@ export function TeacherSearch() {
             Find qualified teachers for your educational institute
           </p>
         </div>
+
+        {hasDelay && (
+          <div className="mb-8">
+            <SubscriptionAlert 
+              type={!user ? 'guest' : 'free'} 
+              message={!user 
+                ? "You are browsing as a guest. Login to see all teachers." 
+                : "You are on a Free plan. You are seeing teacher profiles that are at least 15 days old. Upgrade to Professional for instant access."} 
+            />
+          </div>
+        )}
 
         {/* Search and Filters */}
         <Card className="mb-8">

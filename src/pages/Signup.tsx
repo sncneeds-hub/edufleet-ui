@@ -101,7 +101,7 @@ export function Signup() {
           <h1 className="text-3xl font-bold mb-2">
             EduFleet<span className="text-primary">Exchange</span>
           </h1>
-          <p className="text-muted">
+          <p className="text-muted-foreground">
             Create your institution account
           </p>
         </div>
@@ -116,7 +116,7 @@ export function Signup() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Contact Person Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="text"
                       name="name"
@@ -133,7 +133,7 @@ export function Signup() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Email Address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="email"
                       name="email"
@@ -156,7 +156,7 @@ export function Signup() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Institute Name</label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="text"
                       name="instituteName"
@@ -184,7 +184,7 @@ export function Signup() {
                       onChange={handleChange}
                       disabled={loading}
                     />
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Unique code provided by your institution
                     </p>
                   </div>
@@ -203,7 +203,7 @@ export function Signup() {
                       disabled={loading}
                       maxLength={10}
                     />
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       10-digit Indian mobile number
                     </p>
                   </div>
@@ -232,7 +232,7 @@ export function Signup() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="password"
                       name="password"
@@ -249,7 +249,7 @@ export function Signup() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="password"
                       name="confirmPassword"
@@ -288,12 +288,12 @@ export function Signup() {
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted">Or</span>
+              <span className="px-2 bg-background text-muted-foreground">Or</span>
             </div>
           </div>
 
           {/* Login Link */}
-          <p className="text-center text-sm text-muted">
+          <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link to="/login" className="text-primary hover:underline font-medium">
               Sign in here
@@ -303,7 +303,7 @@ export function Signup() {
 
         {/* Back Button */}
         <div className="text-center mt-6">
-          <Link to="/" className="text-sm text-muted hover:text-primary smooth-transition">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-primary smooth-transition">
             ← Back to Home
           </Link>
         </div>

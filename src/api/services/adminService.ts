@@ -155,24 +155,44 @@ export const adminService = {
   },
 
   /**
-   * Update user status
+   * Update user status and subscription
    */
-  async updateUserStatus(userId: string, isActive: boolean): Promise<ApiResponse<any>> {
+  async updateUserStatus(userId: string, data: { isActive?: boolean; planId?: string; notes?: string }): Promise<ApiResponse<any>> {
     try {
-      const user = await apiClient.put<any>(`/admin/users/${userId}/status`, { 
-        isActive 
-      }, { requiresAuth: true });
+      const user = await apiClient.put<any>(`/admin/users/${userId}/status`, data, { requiresAuth: true });
 
       return {
         success: true,
         data: user,
-        message: `User ${isActive ? 'activated' : 'suspended'} successfully`,
+        message: `User updated successfully`,
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
       throw {
         success: false,
-        error: error.message || 'Failed to update user status',
+        error: error.message || 'Failed to update user',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
+   * Approve/Reject supplier with optional plan update
+   */
+  async approveSupplierStatus(supplierId: string, data: { status: 'approved' | 'rejected'; planId?: string; notes?: string }): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.put<any>(`/admin/suppliers/${supplierId}/approve`, data, { requiresAuth: true });
+
+      return {
+        success: true,
+        data: response,
+        message: `Supplier ${data.status} successfully`,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw {
+        success: false,
+        error: error.message || 'Failed to update supplier status',
         timestamp: new Date().toISOString(),
       };
     }
