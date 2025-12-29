@@ -146,7 +146,10 @@ export function useMyListings(userId: string | undefined) {
 
   const refetch = useCallback(async () => {
     if (!userId) {
-      setLoading(false);
+      // Don't set loading to false here, keep it true or handle it in component
+      // But if we return, listings is empty.
+      // If we set loading false, component renders empty list.
+      // Better to wait for userId.
       return;
     }
 
@@ -164,10 +167,70 @@ export function useMyListings(userId: string | undefined) {
   }, [userId]);
 
   useEffect(() => {
+    if (userId) {
+      refetch();
+    }
+  }, [refetch, userId]);
+
+  return { listings, loading, error, refetch };
+}
+
+/**
+ * Hook to fetch user's jobs (for Institute)
+ */
+export function useMyJobs() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.jobs.getMyJobs();
+      setJobs(response.data);
+    } catch (err: any) {
+      setError(err.error || 'Failed to load your jobs');
+      console.error('Error fetching user jobs:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
     refetch();
   }, [refetch]);
 
-  return { listings, loading, error, refetch };
+  return { jobs, loading, error, refetch };
+}
+
+/**
+ * Hook to fetch user's applications (for Teacher)
+ */
+export function useMyApplications() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.jobs.getMyApplications();
+      setApplications(response.data || []);
+    } catch (err: any) {
+      setError(err.error || 'Failed to load your applications');
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { applications, loading, error, refetch };
 }
 
 /**

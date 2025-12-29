@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { authService, User } from '@/api/services/authService';
+import { 
+  getUserSubscription, 
+  getActiveSubscriptionPlans, 
+  getSubscriptionUsageStats 
+} from '@/api/services/subscriptionService';
 import { toast } from 'sonner';
 
 export interface TeacherSignupData {
@@ -18,6 +23,12 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  subscription: {
+    data: any;
+    plans: any[];
+    stats: any;
+    loading: boolean;
+  };
   login: (email: string, password: string, role: 'institute' | 'admin' | 'teacher', otp?: string) => Promise<void>;
   signup: (name: string, email: string, password: string, instituteName: string, contactPerson: string, instituteCode: string, phone: string, otp?: string) => Promise<void>;
   signupTeacher: (data: TeacherSignupData) => Promise<void>;
@@ -26,6 +37,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   getToken: () => string | null;
   refreshToken: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
+  ensureSubscription: (force?: boolean) => Promise<void> | undefined;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +46,92 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<{
+    data: any;
+    plans: any[];
+    stats: any;
+    loading: boolean;
+    hasLoaded: boolean;
+  }>({
+    data: null,
+    plans: [],
+    stats: null,
+    loading: false,
+    hasLoaded: false
+  });
+
+  const isFetchingSubscription = useRef(false);
+
+  const loadSubscriptionData = useCallback(async (userId: string, force = false) => {
+    // Guard against undefined/null userId
+    if (!userId) {
+      console.warn('[AuthContext] loadSubscriptionData called with no userId');
+      return;
+    }
+    
+    // If already fetching and not forced, don't trigger another fetch
+    if (isFetchingSubscription.current && !force) return;
+    
+    // Use a ref-based check to avoid stale closure issues
+    // We'll use a promise-based pattern to get current state
+    let shouldFetch = force;
+    
+    if (!force) {
+      // Check current state synchronously using a getter pattern
+      await new Promise<void>((resolve) => {
+        setSubscription(prev => {
+          if (prev.hasLoaded) {
+            shouldFetch = false;
+          } else {
+            shouldFetch = true;
+          }
+          resolve();
+          return { ...prev, loading: shouldFetch };
+        });
+      });
+      
+      if (!shouldFetch) return;
+    } else {
+      // Force mode - mark as loading
+      setSubscription(prev => ({ ...prev, loading: true }));
+    }
+
+    try {
+      isFetchingSubscription.current = true;
+      
+      // Fetch each piece of data independently to ensure one failure doesn't block others
+      const [subscriptionResponse, plansResponse, statsResponse] = await Promise.allSettled([
+        getUserSubscription(userId),
+        getActiveSubscriptionPlans(force), // Force refresh plans too
+        getSubscriptionUsageStats(userId)
+      ]);
+
+      setSubscription({
+        data: subscriptionResponse.status === 'fulfilled' && subscriptionResponse.value.success 
+          ? subscriptionResponse.value.data 
+          : null,
+        plans: plansResponse.status === 'fulfilled' && plansResponse.value.success 
+          ? plansResponse.value.data 
+          : [],
+        stats: statsResponse.status === 'fulfilled' && statsResponse.value.success 
+          ? statsResponse.value.data 
+          : null,
+        loading: false,
+        hasLoaded: true
+      });
+    } catch (error) {
+      console.error('Failed to load subscription data:', error);
+      setSubscription(prev => ({ ...prev, loading: false, hasLoaded: true }));
+    } finally {
+      isFetchingSubscription.current = false;
+    }
+  }, []);
+
+  const refreshSubscription = useCallback(async () => {
+    if (user?.id) {
+      await loadSubscriptionData(user.id, true);
+    }
+  }, [user?.id, loadSubscriptionData]);
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -46,6 +145,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const isValid = await authService.validateToken();
           if (isValid) {
             setUser(storedUser);
+            // Fetch subscription data immediately after restoring session
+            // This ensures data is available after hard refresh
+            loadSubscriptionData(storedUser.id, true);
           } else {
             // Token invalid, clear storage
             localStorage.removeItem('token');
@@ -60,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
-  }, []);
+  }, [loadSubscriptionData]);
 
   const login = async (email: string, password: string, role: 'institute' | 'admin' | 'teacher', otp?: string) => {
     try {
@@ -69,6 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.login({ email, password });
       
       setUser(response.user);
+      // Fetch subscription data after login
+      loadSubscriptionData(response.user.id, true);
       toast.success('Login successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
@@ -95,6 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       setUser(response.user);
+      // Fetch subscription data after signup
+      loadSubscriptionData(response.user.id, true);
       toast.success('Signup successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signup failed';
@@ -120,6 +226,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         location: data.location,
       });
       setUser(response.user);
+      // Fetch subscription data after teacher signup
+      loadSubscriptionData(response.user.id, true);
       toast.success('Teacher signup successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signup failed';
@@ -161,6 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       await authService.logout();
       setUser(null);
+      setSubscription({ data: null, plans: [], stats: null, loading: false, hasLoaded: false });
       toast.success('Logged out successfully');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Logout failed';
@@ -187,11 +296,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const ensureSubscription = useCallback((force?: boolean) => {
+    if (user?.id) {
+      return loadSubscriptionData(user.id, force);
+    }
+  }, [user?.id, loadSubscriptionData]);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       isAuthenticated: !!user, 
       isLoading,
+      subscription,
       login, 
       signup, 
       signupTeacher, 
@@ -199,7 +315,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshProfile,
       logout,
       getToken,
-      refreshToken
+      refreshToken,
+      refreshSubscription,
+      ensureSubscription
     }}>
       {children}
     </AuthContext.Provider>

@@ -96,6 +96,17 @@ export function SubscriptionManagement() {
   const [suspendReason, setSuspendReason] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
 
+  // Map user roles to plan types
+  const getPlanTypeForRole = (role: string) => {
+    const roleToPlanType: Record<string, string> = {
+      'institute': 'institute',
+      'teacher': 'teacher',
+      'supplier': 'vendor',
+      'vendor': 'vendor'
+    };
+    return roleToPlanType[role] || 'institute';
+  };
+
   useEffect(() => {
     loadData();
   }, [statusFilter, planFilter]);
@@ -168,14 +179,14 @@ export function SubscriptionManagement() {
             toast.error('Please select a plan');
             return;
           }
-          if (selectedPlanId === actionDialog.subscription.planId) {
+          if (String(selectedPlanId) === String(actionDialog.subscription.planId)) {
             toast.error('Please select a different plan');
             return;
           }
           await changeUserSubscriptionPlan(
             actionDialog.subscription.id, 
             selectedPlanId,
-            `Plan changed by admin to ${plans.find(p => p.id === selectedPlanId)?.displayName}`
+            `Plan changed by admin to ${plans.find(p => String(p.id) === String(selectedPlanId))?.displayName}`
           );
           toast.success('Subscription plan updated successfully');
           break;
@@ -240,12 +251,25 @@ export function SubscriptionManagement() {
       setAdminNotes('');
       loadData();
     } catch (err: any) {
+      console.error('Action failed:', err);
       toast.error(err.message || 'Action failed');
     }
   };
 
   const openActionDialog = (type: any, subscription: any) => {
+    setSelectedPlanId('');
+    setExtendMonths(1);
+    setAdminNotes('');
+    setSuspendReason('');
     setActionDialog({ open: true, type, subscription });
+  };
+
+  const closeActionDialog = () => {
+    setActionDialog({ open: false, type: null, subscription: null, request: null });
+    setSelectedPlanId('');
+    setExtendMonths(1);
+    setAdminNotes('');
+    setSuspendReason('');
   };
 
   const getPaymentStatusBadge = (status: string) => {
@@ -638,7 +662,7 @@ export function SubscriptionManagement() {
       </Tabs>
 
       {/* Action Dialog */}
-      <Dialog open={actionDialog.open} onOpenChange={(open) => !open && setActionDialog({ open: false, type: null, subscription: null, request: null })}>
+      <Dialog open={actionDialog.open} onOpenChange={(open) => !open && closeActionDialog()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -698,13 +722,22 @@ export function SubscriptionManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       {plans
-                        .filter(p => p.planType === actionDialog.subscription?.userRole || (actionDialog.subscription?.userRole === 'institute' && p.planType === 'institute'))
-                        .filter(p => p.id !== actionDialog.subscription?.planId)
-                        .map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id}>
-                            {plan.displayName} (₹{plan.price})
-                          </SelectItem>
-                        ))
+                        .filter(p => p.planType === getPlanTypeForRole(actionDialog.subscription?.userRole))
+                        .filter(p => String(p.id) !== String(actionDialog.subscription?.planId)).length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No other plans available for this role
+                          </div>
+                        ) : (
+                          plans
+                            .filter(p => p.planType === getPlanTypeForRole(actionDialog.subscription?.userRole))
+                            .filter(p => String(p.id) !== String(actionDialog.subscription?.planId))
+                            .map((plan) => (
+                              <SelectItem key={plan.id} value={String(plan.id)}>
+                                {console.log('Rendering plan:', plan)}
+                                {plan.displayName} (₹{plan.price})
+                              </SelectItem>
+                            ))
+                        )
                       }
                     </SelectContent>
                   </Select>

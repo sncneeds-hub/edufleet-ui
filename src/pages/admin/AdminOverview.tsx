@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { api } from '@/api';
 import { useAds } from '@/context/AdContext';
-import { Car, Building2, Megaphone, TrendingUp } from 'lucide-react';
+import { Car, Building2, Megaphone, TrendingUp, CreditCard } from 'lucide-react';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ export function AdminOverview() {
   const { ads } = useAds();
   const [supplierStats, setSupplierStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
   const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priorityListings: 0 });
+  const [subscriptionStats, setSubscriptionStats] = useState<any>(null);
 
   useEffect(() => {
     loadStats();
@@ -18,12 +19,16 @@ export function AdminOverview() {
 
   const loadStats = async () => {
     try {
-      const [supplierResponse, vehicleResponse] = await Promise.all([
+      const [supplierResponse, vehicleResponse, subscriptionResponse] = await Promise.all([
         api.suppliers.getSupplierStats(),
-        api.admin.getStats()
+        api.admin.getStats(),
+        api.subscriptions.getGlobalSubscriptionStats()
       ]);
       setSupplierStats(supplierResponse.data);
       setVehicleStats(vehicleResponse.data);
+      if (subscriptionResponse.success) {
+        setSubscriptionStats(subscriptionResponse.data);
+      }
     } catch (error) {
       console.error('Failed to load stats');
     }
@@ -132,13 +137,34 @@ export function AdminOverview() {
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+              <CreditCard className="w-6 h-6 text-green-600" />
             </div>
-            <span className="text-xs text-green-600 font-medium">+12%</span>
+            <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-sm text-muted-foreground mb-1">Platform Growth</p>
-          <div className="text-3xl font-bold mb-2">24.5K</div>
-          <div className="text-xs text-muted-foreground">Total interactions this month</div>
+          <p className="text-sm text-muted-foreground mb-1">Active Subscriptions</p>
+          <div className="text-3xl font-bold text-green-600 mb-2">
+            {subscriptionStats?.subscriptions?.active || 0}
+          </div>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-blue-600">Total: {subscriptionStats?.subscriptions?.total || 0}</span>
+            <span className="text-amber-600">⏳ {subscriptionStats?.subscriptions?.expiringSoon || 0} Expiring</span>
+          </div>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-primary/10 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-primary" />
+            </div>
+            <span className="text-xs text-green-600 font-medium">
+              ₹{(subscriptionStats?.revenue?.total || 0).toLocaleString()}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-1">Monthly Revenue</p>
+          <div className="text-3xl font-bold mb-2">
+            ₹{(subscriptionStats?.revenue?.total || 0).toLocaleString()}
+          </div>
+          <div className="text-xs text-muted-foreground">Platform revenue this month</div>
         </Card>
       </div>
 

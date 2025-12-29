@@ -9,7 +9,7 @@ import { checkListingLimit, incrementListingCount } from '@/api/services/subscri
 import { Alert } from '@/components/ui/alert';
 
 export function ListingForm() {
-  const { user } = useAuth();
+  const { user, refreshSubscription } = useAuth();
   const [listingCheckResult, setListingCheckResult] = useState<any>(null);
   const [checkingLimit, setCheckingLimit] = useState(true);
   
@@ -167,6 +167,7 @@ export function ListingForm() {
     // Increment listing count if user has subscription
     if (user?.id) {
       await incrementListingCount(user.id);
+      await refreshSubscription();
     }
 
     toast.success('Listing created successfully!');

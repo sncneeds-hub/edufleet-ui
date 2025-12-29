@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useMyListings, useJobs } from '@/hooks/useApi';
+import { useMyListings, useMyJobs } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VehicleCard } from '@/components/VehicleCard';
@@ -20,6 +20,8 @@ import { ListingForm } from '@/components/ListingForm';
 import { JobListingForm } from '@/components/JobListingForm';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
+import { SubscriptionAlert } from '@/components/SubscriptionAlert';
+import { SubscriptionUsageCard } from '@/components/SubscriptionUsageCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,7 +34,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
-  const { user, updateProfile, refreshProfile } = useAuth();
+  const { user, updateProfile, refreshProfile, subscription, ensureSubscription } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -54,9 +56,24 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
     location: user?.location || '',
   });
 
+  const { listings: userListings, loading: listingsLoading, refetch: refetchListings } = useMyListings(user?.id);
+  const { jobs: userJobs, loading: jobsLoading, refetch: refetchJobs } = useMyJobs();
+
   useEffect(() => {
-    refreshProfile();
-  }, []);
+    if (user?.id) {
+      refreshProfile();
+      ensureSubscription();
+      refetchListings();
+      refetchJobs();
+    }
+  }, [user?.id, ensureSubscription, refetchListings, refetchJobs]);
+
+  // Refresh subscription when switching to creation tabs to ensure limits are fresh
+  useEffect(() => {
+    if (user?.id && (activeTab === 'create' || activeTab === 'create-job' || activeTab === 'subscription')) {
+      ensureSubscription(true);
+    }
+  }, [activeTab, ensureSubscription, user?.id]);
 
   useEffect(() => {
     if (user) {
@@ -69,9 +86,6 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
       });
     }
   }, [user]);
-
-  const { listings: userListings, loading: listingsLoading } = useMyListings(user?.id);
-  const { jobs: userJobs, loading: jobsLoading } = useJobs();
   
   const handleSaveProfile = async () => {
     try {
@@ -92,13 +106,20 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
     totalApplicants: userJobs.reduce((acc, j) => acc + (j.applicants || 0), 0),
   };
 
-  const plan = user.subscription?.planId as any;
-  const canAdvertise = plan?.features?.canAdvertiseVehicles ?? false;
-  const maxListings = plan?.features?.maxListings ?? 0;
-  const maxJobs = plan?.features?.maxJobPosts ?? 1;
+  const subscriptionData = subscription.data;
+  const availablePlans = subscription.plans;
+  const subscriptionStats = subscription.stats;
+  const subscriptionLoading = subscription.loading;
 
-  const listingLimitReached = maxListings !== -1 && userListings.length >= maxListings;
-  const jobLimitReached = maxJobs !== -1 && userJobs.length >= maxJobs;
+  const activePlanId = subscriptionData?.subscriptionPlanId || user?.subscription?.planId;
+  const activePlan = availablePlans.find(p => p.id === activePlanId);
+  const planFeatures = activePlan?.features || {};
+  
+  const maxListings = subscriptionStats?.listingCount?.allowed ?? planFeatures.maxListings ?? 0;
+  const maxJobs = subscriptionStats?.jobPostsCount?.allowed ?? planFeatures.maxJobPosts ?? 1;
+
+  const listingLimitReached = subscriptionStats?.listingCount?.limitReached ?? (maxListings !== -1 && userListings.length >= maxListings);
+  const jobLimitReached = subscriptionStats?.jobPostsCount?.limitReached ?? (maxJobs !== -1 && userJobs.length >= maxJobs);
 
   const getSuggestedAction = () => {
     if (userListings.length === 0) {
@@ -130,16 +151,16 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
 
   const suggestion = getSuggestedAction();
 
+  // Loading state while checking auth (shouldn't normally show due to ProtectedRoute)
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">Please login to access dashboard</h1>
-        <Button onClick={() => navigate('/login')}>Go to Login</Button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (listingsLoading || jobsLoading) {
+  if (listingsLoading || jobsLoading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-background py-8">
         <div className="container mx-auto px-4">
@@ -170,8 +191,24 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
           <p className="text-muted-foreground">{user.instituteName}</p>
         </div>
 
-        {/* Suggested Action */}
-        <DashboardSuggestion {...suggestion} />
+        {/* Subscription Alerts & Usage Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <SubscriptionAlert 
+              subscription={subscriptionData} 
+              stats={subscriptionStats} 
+            />
+            <div className="mt-4">
+              <DashboardSuggestion {...suggestion} />
+            </div>
+          </div>
+          <div className="lg:col-span-1">
+            <SubscriptionUsageCard 
+              stats={subscriptionStats} 
+              loading={subscriptionLoading} 
+            />
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
@@ -281,7 +318,12 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Subscription Management</h2>
             </div>
-            <SubscriptionStatus />
+            <SubscriptionStatus 
+              subscriptionData={subscriptionData} 
+              availablePlans={availablePlans} 
+              subscriptionStats={subscriptionStats} 
+              loading={subscriptionLoading} 
+            />
           </div>
         ) : activeTab === 'jobs' ? (
           <div>

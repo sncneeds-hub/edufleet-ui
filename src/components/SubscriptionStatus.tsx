@@ -1,10 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { 
-  getUserSubscription, 
-  continueSubscription, 
-  getSubscriptionUsageStats, 
-  getActiveSubscriptionPlans,
   createSubscriptionRequest,
   getMySubscriptionRequests
 } from '@/api/services/subscriptionService';
@@ -24,7 +20,6 @@ import {
   History,
   Send
 } from 'lucide-react';
-import { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
@@ -39,13 +34,30 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { SubscriptionRequest } from '@/types/subscriptionTypes';
 
-export function SubscriptionStatus() {
-  const { user } = useAuth();
-  const [subscription, setSubscription] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [plans, setPlans] = useState<any[]>([]);
+interface SubscriptionStatusProps {
+  subscriptionData?: any;
+  availablePlans?: any[];
+  subscriptionStats?: any;
+  isLoading?: boolean;
+  loading?: boolean; // Alias for compatibility
+}
+
+export function SubscriptionStatus({ 
+  subscriptionData: propSubscription, 
+  availablePlans: propPlans, 
+  subscriptionStats: propStats,
+  isLoading: propIsLoading,
+  loading: propLoading
+}: SubscriptionStatusProps = {}) {
+  const { user, subscription: authSubscription, ensureSubscription } = useAuth();
+  
+  // Use props if provided, otherwise use data from AuthContext
+  const subscription = propSubscription !== undefined ? propSubscription : authSubscription.data;
+  const stats = propStats !== undefined ? propStats : authSubscription.stats;
+  const plans = propPlans !== undefined && propPlans.length > 0 ? propPlans : authSubscription.plans;
+  const loading = propIsLoading ?? propLoading ?? authSubscription.loading;
+
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [continuing, setContinuing] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,59 +72,47 @@ export function SubscriptionStatus() {
     notes: '',
   });
 
+  // Update state when props change
+  useEffect(() => {
+    if (propSubscription !== undefined) {
+      // setSubscription(propSubscription); // No longer needed as we use propSubscription directly
+    }
+  }, [propSubscription]);
+
+  useEffect(() => {
+    if (propStats !== undefined) {
+      // setStats(propStats); // No longer needed as we use propStats directly
+    }
+  }, [propStats]);
+
+  useEffect(() => {
+    if (propPlans !== undefined && propPlans.length > 0) {
+      // setPlans(propPlans); // No longer needed as we use propPlans directly
+    }
+  }, [propPlans]);
+
+  useEffect(() => {
+    if (propIsLoading !== undefined || propLoading !== undefined) {
+      // setLoading(propIsLoading ?? propLoading ?? false); // No longer needed as we use propIsLoading/propLoading directly
+    }
+  }, [propIsLoading, propLoading]);
+
   useEffect(() => {
     if (user?.id) {
-      loadData();
+      ensureSubscription();
+      loadRequests();
     }
-  }, [user?.id]);
+  }, [user?.id, ensureSubscription]);
 
-  const loadData = async () => {
+  const loadRequests = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const [subscriptionResponse, statsResponse, plansResponse, requestsResponse] = await Promise.all([
-        getUserSubscription(user!.id),
-        getSubscriptionUsageStats(user!.id),
-        getActiveSubscriptionPlans(),
-        getMySubscriptionRequests()
-      ]);
-
-      if (subscriptionResponse.success && subscriptionResponse.data) {
-        setSubscription(subscriptionResponse.data);
-      }
-      
-      if (statsResponse.success && statsResponse.data) {
-        setStats(statsResponse.data);
-      }
-
-      if (plansResponse.success && plansResponse.data) {
-        const role = user?.role === 'admin' ? 'institute' : user?.role || 'institute';
-        const roleMap: Record<string, string> = {
-          'institute': 'institute',
-          'teacher': 'teacher',
-          'supplier': 'vendor',
-          'vendor': 'vendor'
-        };
-        const planType = roleMap[role];
-        
-        const filteredPlans = plansResponse.data.filter((p: any) => p.planType === planType);
-        setPlans(filteredPlans);
-      }
-
+      const requestsResponse = await getMySubscriptionRequests();
       if (requestsResponse.success && requestsResponse.data) {
         setRequests(requestsResponse.data);
       }
-
     } catch (err) {
-      setError('Failed to load subscription details');
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load requests:', err);
     }
-  };
-
-  const loadSubscription = async () => {
-    await loadData();
   };
 
   const handleContinueSubscription = async () => {
@@ -137,7 +137,7 @@ export function SubscriptionStatus() {
 
       if (response.success) {
         toast.success('Renewal request submitted successfully! Our team will verify and approve your renewal shortly.');
-        await loadData();
+        await loadRequests();
       }
     } catch (err: any) {
       toast.error(err.error || 'Failed to submit renewal request');
@@ -155,7 +155,7 @@ export function SubscriptionStatus() {
       
       // Determine request type
       const currentPlanId = subscription?.subscriptionPlanId;
-      const currentPlanObj = plans.find(p => String(p.id) === String(currentPlanId));
+      const currentPlanObj = plans.find((p: any) => String(p.id) === String(currentPlanId));
       
       let requestType: 'upgrade' | 'downgrade' | 'renewal' = 'upgrade';
       if (currentPlanObj) {
@@ -175,7 +175,7 @@ export function SubscriptionStatus() {
       if (response.success) {
         toast.success(response.message);
         setRequestDialog({ open: false, plan: null, notes: '' });
-        await loadData();
+        await loadRequests();
       }
     } catch (err: any) {
       toast.error(err.error || 'Failed to submit request');
@@ -184,7 +184,8 @@ export function SubscriptionStatus() {
     }
   };
 
-  if (loading) {
+  // Loading state while checking auth (shouldn't normally show due to ProtectedRoute)
+  if (loading && !subscription) {
     return (
       <Card className="p-6 bg-muted/50 animate-pulse">
         <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
@@ -206,6 +207,22 @@ export function SubscriptionStatus() {
   const daysRemaining = stats?.daysRemaining ?? 0;
   const isExpiringSoon = stats?.isExpiringSoon ?? false;
   const isExpired = stats?.isExpired ?? false;
+
+  // Filter plans based on user role to show only relevant plans
+  const filteredPlans = plans.filter((plan: any) => {
+    if (!user) return true;
+    
+    // Map user roles to plan types
+    const roleToPlanType: Record<string, string> = {
+      'institute': 'institute',
+      'teacher': 'teacher',
+      'supplier': 'vendor',
+      'vendor': 'vendor'
+    };
+    
+    const userPlanType = roleToPlanType[user.role] || 'institute';
+    return plan.planType === userPlanType;
+  });
 
   return (
     <div className="space-y-6">
@@ -369,7 +386,7 @@ export function SubscriptionStatus() {
             </Button>
             <Button
               variant="outline"
-              onClick={loadSubscription}
+              onClick={loadRequests} // Changed from loadSubscription to loadRequests
               disabled={loading || continuing}
               size="lg"
             >
@@ -401,11 +418,11 @@ export function SubscriptionStatus() {
       )}
 
       {/* Available Plans Section */}
-      {plans.length > 0 && (
+      {filteredPlans.length > 0 && (
         <div>
           <h3 className="text-xl font-bold mb-4">Plan Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((plan) => {
+            {filteredPlans.map((plan) => {
               const current = isCurrentPlan(plan.id);
               const pending = hasPendingRequest(plan.id);
               

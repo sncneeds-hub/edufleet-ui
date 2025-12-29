@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTeachers } from '@/hooks/useApi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ import { useAuth } from '@/context/AuthContext';
 import { SubscriptionAlert } from '@/components/SubscriptionAlert';
 
 export function TeacherSearch() {
-  const { user } = useAuth();
+  const { user, subscription, ensureSubscription } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
@@ -50,6 +50,16 @@ export function TeacherSearch() {
     time: '',
     message: '',
   });
+
+  useEffect(() => {
+    if (user?.id) {
+      ensureSubscription();
+    }
+  }, [user?.id, ensureSubscription]);
+
+  const subscriptionData = subscription.data;
+  const subscriptionStats = subscription.stats;
+  const subscriptionLoading = subscription.loading;
 
   // Fetch teachers from API
   const { teachers: allTeachers, loading } = useTeachers();
@@ -101,9 +111,10 @@ export function TeacherSearch() {
     setSelectedTeacher(null);
   };
 
-  // Note: Subscription check simplified until full integration
-  const isFreePlan = !user;
-  const hasDelay = isFreePlan || !user;
+  const plan = subscriptionData?.planId || user?.subscription?.planId;
+  const planFeatures = plan?.features || {};
+  const teacherDataDelayDays = planFeatures.teacherDataDelayDays ?? 15;
+  const isFreePlan = !user || teacherDataDelayDays > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,16 +132,19 @@ export function TeacherSearch() {
           </p>
         </div>
 
-        {hasDelay && (
-          <div className="mb-8">
-            <SubscriptionAlert 
-              type={!user ? 'guest' : 'free'} 
-              message={!user 
+        <div className="mb-8">
+          <SubscriptionAlert 
+            subscription={subscriptionData} 
+            stats={subscriptionStats} 
+          />
+          {(!user || (user && teacherDataDelayDays > 0)) && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
+              {!user 
                 ? "You are browsing as a guest. Login to see all teachers." 
-                : "You are on a Free plan. You are seeing teacher profiles that are at least 15 days old. Upgrade to Professional for instant access."} 
-            />
-          </div>
-        )}
+                : `You are on a plan with ${teacherDataDelayDays} days delay. Upgrade to Professional for instant access to new teachers.`}
+            </div>
+          )}
+        </div>
 
         {/* Search and Filters */}
         <Card className="mb-8">

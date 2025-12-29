@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/api';
+import { useMyApplications } from '@/hooks/useApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,9 +36,13 @@ import { X } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Switch } from '@/components/ui/switch';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus'; // Assuming this component exists
+import { SubscriptionAlert } from '@/components/SubscriptionAlert';
+import { SubscriptionUsageCard } from '@/components/SubscriptionUsageCard';
 
 export function TeacherDashboard() {
-  const { user, updateProfile, refreshProfile } = useAuth();
+  const { user, updateProfile, refreshProfile, subscription, ensureSubscription } = useAuth();
+  const { applications, loading: appsLoading, refetch: refetchApps } = useMyApplications();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: user?.name || '',
@@ -51,12 +56,15 @@ export function TeacherDashboard() {
   });
   const [newQual, setNewQual] = useState('');
   const [newSubject, setNewSubject] = useState('');
-  const [applications, setApplications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Refresh profile and data when user is available
   useEffect(() => {
-    refreshProfile();
-  }, []);
+    if (user?.id) {
+      refreshProfile();
+      ensureSubscription();
+      refetchApps();
+    }
+  }, [user?.id, ensureSubscription, refetchApps]);
 
   useEffect(() => {
     if (user) {
@@ -70,24 +78,8 @@ export function TeacherDashboard() {
         subjects: user.subjects || [],
         isAvailable: user.isAvailable ?? true,
       });
-      loadApplications();
     }
   }, [user]);
-
-  const loadApplications = async () => {
-    if (!user || user.role !== 'teacher') return;
-    
-    try {
-      setLoading(true);
-      const response = await api.jobs.getApplications();
-      setApplications(response.data || []);
-    } catch (error) {
-      console.error('Failed to load applications:', error);
-      toast.error('Failed to load applications');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Separate interviews from applications that have interviews scheduled
   const interviews = applications.filter(app => app.interviewScheduled);
@@ -163,7 +155,21 @@ export function TeacherDashboard() {
     }
   };
 
-  if (!user || user.role !== 'teacher') {
+  const subscriptionData = subscription.data;
+  const availablePlans = subscription.plans;
+  const subscriptionStats = subscription.stats;
+  const subscriptionLoading = subscription.loading;
+
+  // Loading state while checking auth or loading data
+  if (!user || appsLoading || subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (user.role !== 'teacher') {
     return <div>Unauthorized</div>;
   }
 
@@ -178,6 +184,22 @@ export function TeacherDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Teacher Dashboard</h1>
           <p className="text-muted-foreground">Manage your profile, applications, and interviews</p>
+        </div>
+
+        {/* Subscription Alerts & Usage Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <SubscriptionAlert 
+              subscription={subscriptionData} 
+              stats={subscriptionStats} 
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <SubscriptionUsageCard 
+              stats={subscriptionStats} 
+              loading={subscriptionLoading} 
+            />
+          </div>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
@@ -198,7 +220,12 @@ export function TeacherDashboard() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Subscription Management</h2>
               </div>
-              <SubscriptionStatus />
+              <SubscriptionStatus 
+                subscriptionData={subscriptionData} 
+                availablePlans={availablePlans} 
+                subscriptionStats={subscriptionStats} 
+                isLoading={subscriptionLoading} 
+              />
             </div>
           </TabsContent>
 

@@ -291,7 +291,7 @@ export function SupplierManagement() {
                 <SelectContent>
                   <SelectItem value="none">No plan change (keep current)</SelectItem>
                   {plans.map((plan) => (
-                    <SelectItem key={plan.id} value={plan.id}>
+                    <SelectItem key={plan.id} value={String(plan.id)}>
                       {plan.displayName} (₹{plan.price})
                     </SelectItem>
                   ))}

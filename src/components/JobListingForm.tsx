@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Plus, X, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, X, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createJob } from '@/api/services/jobService';
 import { useAuth } from '@/context/AuthContext';
+import { checkJobPostLimit } from '@/api/services/subscriptionEnforcement';
+import { Alert } from '@/components/ui/alert';
 
 export function JobListingForm() {
-  const { user } = useAuth();
+  const { user, refreshSubscription } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingLimit, setCheckingLimit] = useState(true);
+  const [jobLimitResult, setJobLimitResult] = useState<any>(null);
+
   const [formData, setFormData] = useState({
     title: '',
-    department: '',
-    location: '',
-    type: 'full-time',
-    experience: '',
+    city: '',
+    state: '',
+    employmentType: 'full-time' as 'full-time' | 'part-time' | 'contract' | 'temporary',
+    experienceMin: '',
+    experienceMax: '',
     salaryMin: '',
     salaryMax: '',
     description: '',
@@ -24,12 +30,32 @@ export function JobListingForm() {
   const [requirements, setRequirements] = useState<string[]>(['']);
   const [responsibilities, setResponsibilities] = useState<string[]>(['']);
   const [benefits, setBenefits] = useState<string[]>(['']);
+  const [subjects, setSubjects] = useState<string[]>(['']);
+  const [qualifications, setQualifications] = useState<string[]>(['']);
+
+  useEffect(() => {
+    const checkLimit = async () => {
+      if (!user?.id) {
+        setCheckingLimit(false);
+        return;
+      }
+      try {
+        const result = await checkJobPostLimit();
+        setJobLimitResult(result.data);
+      } catch (err) {
+        console.error('Job limit check error:', err);
+      } finally {
+        setCheckingLimit(false);
+      }
+    };
+    checkLimit();
+  }, [user?.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'salaryMin' || name === 'salaryMax' ? parseFloat(value) || value : value
+      [name]: value
     }));
   };
 
@@ -65,33 +91,59 @@ export function JobListingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check limit before submission
+    if (jobLimitResult && !jobLimitResult.allowed) {
+      toast.error(jobLimitResult.message || 'Job post limit reached');
+      return;
+    }
+
     // Validate required fields
     if (!formData.title.trim()) {
       toast.error('Please enter job title');
       return;
     }
-    if (!formData.department.trim()) {
-      toast.error('Please enter department');
+    if (!formData.city.trim()) {
+      toast.error('Please enter city');
       return;
     }
-    if (!formData.location.trim()) {
-      toast.error('Please enter location');
+    if (!formData.state.trim()) {
+      toast.error('Please enter state');
       return;
     }
-    if (!formData.experience.trim()) {
-      toast.error('Please enter experience requirement');
+    if (!formData.employmentType) {
+      toast.error('Please select employment type');
+      return;
+    }
+    if (!formData.experienceMin || !formData.experienceMax) {
+      toast.error('Please enter experience range');
+      return;
+    }
+    const expMin = parseInt(formData.experienceMin);
+    const expMax = parseInt(formData.experienceMax);
+    if (isNaN(expMin) || isNaN(expMax) || expMin < 0 || expMax < 0) {
+      toast.error('Please enter valid experience range');
+      return;
+    }
+    if (expMin > expMax) {
+      toast.error('Maximum experience must be greater than minimum');
       return;
     }
     if (!formData.salaryMin || !formData.salaryMax) {
       toast.error('Please enter salary range');
       return;
     }
-    if (!formData.description.trim()) {
-      toast.error('Please enter job description');
+    const salMin = parseInt(formData.salaryMin);
+    const salMax = parseInt(formData.salaryMax);
+    if (isNaN(salMin) || isNaN(salMax) || salMin < 0 || salMax < 0) {
+      toast.error('Please enter valid salary range');
       return;
     }
-    if (!formData.deadline) {
-      toast.error('Please select application deadline');
+    if (salMin > salMax) {
+      toast.error('Maximum salary must be greater than minimum');
+      return;
+    }
+    if (!formData.description.trim()) {
+      toast.error('Please enter job description');
       return;
     }
 
@@ -99,6 +151,18 @@ export function JobListingForm() {
     const filteredRequirements = requirements.filter(r => r.trim() !== '');
     const filteredResponsibilities = responsibilities.filter(r => r.trim() !== '');
     const filteredBenefits = benefits.filter(b => b.trim() !== '');
+    const filteredSubjects = subjects.filter(s => s.trim() !== '');
+    const filteredQualifications = qualifications.filter(q => q.trim() !== '');
+
+    if (filteredSubjects.length === 0) {
+      toast.error('Please add at least one subject');
+      return;
+    }
+
+    if (filteredQualifications.length === 0) {
+      toast.error('Please add at least one qualification');
+      return;
+    }
 
     if (filteredRequirements.length === 0) {
       toast.error('Please add at least one requirement');
@@ -112,34 +176,54 @@ export function JobListingForm() {
 
     setIsSubmitting(true);
     try {
+      // Parse numeric values (already validated above)
+      const experienceMin = parseInt(formData.experienceMin);
+      const experienceMax = parseInt(formData.experienceMax);
+      const salaryMin = parseInt(formData.salaryMin);
+      const salaryMax = parseInt(formData.salaryMax);
+
+      // Transform data to match backend schema
       const jobData = {
-        title: formData.title,
-        department: formData.department,
-        location: formData.location,
-        type: formData.type,
-        experience: formData.experience,
-        salaryMin: parseInt(formData.salaryMin) || 0,
-        salaryMax: parseInt(formData.salaryMax) || 0,
-        description: formData.description,
-        deadline: formData.deadline,
+        title: formData.title.trim(),
+        location: {
+          city: formData.city.trim(),
+          state: formData.state.trim(),
+          country: 'India',
+        },
+        employmentType: formData.employmentType,
+        experience: {
+          min: experienceMin,
+          max: experienceMax,
+        },
+        salary: {
+          min: salaryMin,
+          max: salaryMax,
+          currency: 'INR',
+        },
+        description: formData.description.trim(),
+        applicationDeadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         requirements: filteredRequirements,
         responsibilities: filteredResponsibilities,
         benefits: filteredBenefits,
-        userId: user?.id, // Include user ID for the request
+        subjects: filteredSubjects,
+        qualification: filteredQualifications,
       };
 
+      console.log('Submitting job data:', jobData); // Debug log
       const response = await createJob(jobData);
       
       if (response.success || response.data) {
         toast.success('Job listing created successfully!');
+        await refreshSubscription();
         
         // Reset form
         setFormData({
           title: '',
-          department: '',
-          location: '',
-          type: 'full-time',
-          experience: '',
+          city: '',
+          state: '',
+          employmentType: 'full-time',
+          experienceMin: '',
+          experienceMax: '',
           salaryMin: '',
           salaryMax: '',
           description: '',
@@ -148,11 +232,23 @@ export function JobListingForm() {
         setRequirements(['']);
         setResponsibilities(['']);
         setBenefits(['']);
+        setSubjects(['']);
+        setQualifications(['']);
       }
     } catch (error: any) {
-      const errorMsg = error?.error || error?.message || 'Failed to create job listing';
-      toast.error(errorMsg);
       console.error('Job creation error:', error);
+      
+      // Extract detailed error message
+      let errorMsg = 'Failed to create job listing';
+      if (error?.error) {
+        errorMsg = error.error;
+      } else if (error?.message) {
+        errorMsg = error.message;
+      } else if (error?.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      }
+      
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -161,6 +257,35 @@ export function JobListingForm() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Create New Job Opening</h2>
+
+      {/* Job Limit Alert */}
+      {checkingLimit ? (
+        <Alert className="mb-6">
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <p className="text-sm">Checking job post limits...</p>
+        </Alert>
+      ) : jobLimitResult && !jobLimitResult.allowed ? (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <div className="ml-4">
+            <p className="font-semibold">Job Post Limit Reached</p>
+            <p className="text-sm mt-1">
+              {jobLimitResult.message || 'You have reached your job post limit. Upgrade your plan to post more jobs.'}
+            </p>
+          </div>
+        </Alert>
+      ) : jobLimitResult && jobLimitResult.remaining <= 1 ? (
+        <Alert className="mb-6 border-amber-200 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <div className="ml-4">
+            <p className="font-semibold text-amber-900">Low Job Post Quota</p>
+            <p className="text-sm mt-1 text-amber-800">
+              You have only {jobLimitResult.remaining} job post{jobLimitResult.remaining !== 1 ? 's' : ''} remaining in your plan.
+            </p>
+          </div>
+        </Alert>
+      ) : null}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
         <Card className="lg:col-span-2 p-6">
@@ -178,7 +303,7 @@ export function JobListingForm() {
                   <input
                     type="text"
                     name="title"
-                    placeholder="e.g., School Bus Driver"
+                    placeholder="e.g., Mathematics Teacher"
                     value={formData.title}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
@@ -188,24 +313,24 @@ export function JobListingForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Department *</label>
+                    <label className="text-sm font-medium mb-2 block">City *</label>
                     <input
                       type="text"
-                      name="department"
-                      placeholder="e.g., Transport"
-                      value={formData.department}
+                      name="city"
+                      placeholder="e.g., Mumbai"
+                      value={formData.city}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Location *</label>
+                    <label className="text-sm font-medium mb-2 block">State *</label>
                     <input
                       type="text"
-                      name="location"
-                      placeholder="e.g., Delhi, India"
-                      value={formData.location}
+                      name="state"
+                      placeholder="e.g., Maharashtra"
+                      value={formData.state}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
@@ -215,26 +340,53 @@ export function JobListingForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Job Type *</label>
+                    <label className="text-sm font-medium mb-2 block">Employment Type *</label>
                     <select
-                      name="type"
-                      value={formData.type}
+                      name="employmentType"
+                      value={formData.employmentType}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="full-time">Full Time</option>
                       <option value="part-time">Part Time</option>
                       <option value="contract">Contract</option>
-                      <option value="internship">Internship</option>
+                      <option value="temporary">Temporary</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Experience Required *</label>
+                    <label className="text-sm font-medium mb-2 block">Application Deadline</label>
                     <input
-                      type="text"
-                      name="experience"
-                      placeholder="e.g., 3-5 years"
-                      value={formData.experience}
+                      type="date"
+                      name="deadline"
+                      value={formData.deadline}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Min Experience (years) *</label>
+                    <input
+                      type="number"
+                      name="experienceMin"
+                      placeholder="0"
+                      min="0"
+                      value={formData.experienceMin}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Max Experience (years) *</label>
+                    <input
+                      type="number"
+                      name="experienceMax"
+                      placeholder="5"
+                      min="0"
+                      value={formData.experienceMax}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
@@ -270,18 +422,6 @@ export function JobListingForm() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Application Deadline *</label>
-                  <input
-                    type="date"
-                    name="deadline"
-                    value={formData.deadline}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-
-                <div>
                   <label className="text-sm font-medium mb-2 block">Job Description *</label>
                   <textarea
                     name="description"
@@ -293,6 +433,86 @@ export function JobListingForm() {
                     required
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Subjects */}
+            <div className="border-b border-border pb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-foreground">Subjects *</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addArrayItem(subjects, setSubjects)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {subjects.map((subject, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g., Mathematics"
+                      value={subject}
+                      onChange={(e) => handleArrayChange(index, e.target.value, subjects, setSubjects)}
+                      className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {subjects.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeArrayItem(index, subjects, setSubjects)}
+                        className="text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Qualifications */}
+            <div className="border-b border-border pb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-foreground">Qualifications *</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addArrayItem(qualifications, setQualifications)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {qualifications.map((qual, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g., B.Ed, M.Sc Mathematics"
+                      value={qual}
+                      onChange={(e) => handleArrayChange(index, e.target.value, qualifications, setQualifications)}
+                      className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    {qualifications.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeArrayItem(index, qualifications, setQualifications)}
+                        className="text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -315,7 +535,7 @@ export function JobListingForm() {
                   <div key={index} className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g., Valid commercial driving license"
+                      placeholder="e.g., Strong communication skills"
                       value={req}
                       onChange={(e) => handleArrayChange(index, e.target.value, requirements, setRequirements)}
                       className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
@@ -355,7 +575,7 @@ export function JobListingForm() {
                   <div key={index} className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g., Safely transport students to and from school"
+                      placeholder="e.g., Prepare and deliver lessons"
                       value={resp}
                       onChange={(e) => handleArrayChange(index, e.target.value, responsibilities, setResponsibilities)}
                       className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
@@ -439,33 +659,60 @@ export function JobListingForm() {
               {formData.title ? (
                 <>
                   <div className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 p-4 rounded-lg text-center">
-                    <Briefcase className="w-8 h-8 text-primary mx-auto mb-2" />
-                    <h4 className="font-bold line-clamp-2">{formData.title}</h4>
+                    <h4 className="font-bold text-lg">{formData.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {formData.city && formData.state ? `${formData.city}, ${formData.state}` : 'Location not set'}
+                    </p>
                   </div>
-                  {formData.department && (
-                    <p className="text-sm text-muted-foreground">{formData.department}</p>
-                  )}
-                  {formData.location && (
-                    <p className="text-sm text-muted-foreground">{formData.location}</p>
-                  )}
-                  {(formData.salaryMin && formData.salaryMax) && (
-                    <div className="text-lg font-bold text-primary">
-                      ₹{parseInt(formData.salaryMin).toLocaleString()} - ₹{parseInt(formData.salaryMax).toLocaleString()}/mo
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="bg-muted/50 p-2 rounded">
+                      <span className="text-muted-foreground">Type:</span>
+                      <p className="font-medium capitalize">{formData.employmentType.replace('-', ' ')}</p>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded">
+                      <span className="text-muted-foreground">Experience:</span>
+                      <p className="font-medium">
+                        {formData.experienceMin && formData.experienceMax 
+                          ? `${formData.experienceMin}-${formData.experienceMax} years` 
+                          : 'Not set'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/50 p-2 rounded text-sm">
+                    <span className="text-muted-foreground">Salary:</span>
+                    <p className="font-medium">
+                      {formData.salaryMin && formData.salaryMax 
+                        ? `₹${parseInt(formData.salaryMin).toLocaleString()} - ₹${parseInt(formData.salaryMax).toLocaleString()}/month` 
+                        : 'Not set'}
+                    </p>
+                  </div>
+
+                  {subjects.filter(s => s.trim()).length > 0 && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Subjects:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {subjects.filter(s => s.trim()).map((s, i) => (
+                          <span key={i} className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {formData.type && (
-                    <span className={`inline-block text-xs px-2 py-1 rounded font-medium ${
-                      formData.type === 'full-time' ? 'bg-primary/10 text-primary' : 
-                      formData.type === 'part-time' ? 'bg-secondary/10 text-secondary' : 
-                      'bg-accent/10 text-accent'
-                    }`}>
-                      {formData.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                    </span>
+
+                  {formData.description && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Description:</span>
+                      <p className="mt-1 line-clamp-3">{formData.description}</p>
+                    </div>
                   )}
                 </>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
-                  Fill form to see preview
+                  <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Fill in the form to see preview</p>
                 </div>
               )}
             </div>
