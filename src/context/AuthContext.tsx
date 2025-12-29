@@ -140,19 +140,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedUser = authService.getStoredUser();
         const token = authService.getStoredToken();
 
-        if (storedUser && token) {
-          // Validate token
-          const isValid = await authService.validateToken();
-          if (isValid) {
-            setUser(storedUser);
-            // Fetch subscription data immediately after restoring session
-            // This ensures data is available after hard refresh
-            loadSubscriptionData(storedUser.id, true);
-          } else {
-            // Token invalid, clear storage
+        if (token) {
+          try {
+            // Get fresh user data instead of just validating
+            const freshUser = await authService.getCurrentUser();
+            if (freshUser) {
+              setUser(freshUser);
+              // Update local storage with fresh data
+              localStorage.setItem('user', JSON.stringify(freshUser));
+              // Fetch subscription data immediately after restoring session
+              loadSubscriptionData(freshUser.id, true);
+            } else {
+              throw new Error('No user data returned');
+            }
+          } catch (error) {
+            console.error('Token validation failed:', error);
+            // Token invalid or request failed, clear storage
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setUser(null);
           }
+        } else {
+          // No token, clear any stale user data
+          setUser(null);
+          localStorage.removeItem('user');
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
@@ -254,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     try {
       const profile = await authService.getProfile();
       setUser(profile);
@@ -262,7 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Failed to refresh profile:', error);
     }
-  };
+  }, []);
 
   const logout = async () => {
     try {

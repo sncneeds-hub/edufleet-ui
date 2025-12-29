@@ -66,7 +66,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
       refetchListings();
       refetchJobs();
     }
-  }, [user?.id, ensureSubscription, refetchListings, refetchJobs]);
+  }, [user?.id, refreshProfile, ensureSubscription, refetchListings, refetchJobs]);
 
   // Refresh subscription when switching to creation tabs to ensure limits are fresh
   useEffect(() => {
@@ -117,6 +117,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   
   const maxListings = subscriptionStats?.listingCount?.allowed ?? planFeatures.maxListings ?? 0;
   const maxJobs = subscriptionStats?.jobPostsCount?.allowed ?? planFeatures.maxJobPosts ?? 1;
+  const canAdvertise = planFeatures.canAdvertiseVehicles ?? false;
 
   const listingLimitReached = subscriptionStats?.listingCount?.limitReached ?? (maxListings !== -1 && userListings.length >= maxListings);
   const jobLimitReached = subscriptionStats?.jobPostsCount?.limitReached ?? (maxJobs !== -1 && userJobs.length >= maxJobs);

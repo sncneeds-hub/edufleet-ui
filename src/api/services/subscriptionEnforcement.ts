@@ -14,7 +14,7 @@ import {
 
 export const checkBrowseLimit = async (): Promise<ApiResponse<BrowseCheckResult>> => {
   try {
-    const response = await apiClient.get('/api/subscriptions/check/browse-limit');
+    const response = await apiClient.get('/subscriptions/check/browse-limit');
     return {
       success: true,
       data: response.data,
@@ -38,7 +38,7 @@ export const checkBrowseLimit = async (): Promise<ApiResponse<BrowseCheckResult>
 
 export const incrementBrowseCount = async (): Promise<ApiResponse<{ success: boolean }>> => {
   try {
-    const response = await apiClient.post('/api/subscriptions/increment/browse-count');
+    const response = await apiClient.post('/subscriptions/increment/browse-count');
     return {
       success: true,
       data: { success: response.data.success },
@@ -61,7 +61,7 @@ export const incrementBrowseCount = async (): Promise<ApiResponse<{ success: boo
 
 export const checkListingLimit = async (): Promise<ApiResponse<ListingCheckResult>> => {
   try {
-    const response = await apiClient.get('/api/subscriptions/check/listing-limit');
+    const response = await apiClient.get('/subscriptions/check/listing-limit');
     return {
       success: true,
       data: response.data,
@@ -85,7 +85,7 @@ export const checkListingLimit = async (): Promise<ApiResponse<ListingCheckResul
 
 export const incrementListingCount = async (): Promise<ApiResponse<{ success: boolean }>> => {
   try {
-    const response = await apiClient.post('/api/subscriptions/increment/listing-count');
+    const response = await apiClient.post('/subscriptions/increment/listing-count');
     return {
       success: true,
       data: { success: response.data.success },
@@ -104,7 +104,7 @@ export const incrementListingCount = async (): Promise<ApiResponse<{ success: bo
 
 export const decrementListingCount = async (): Promise<ApiResponse<{ success: boolean }>> => {
   try {
-    const response = await apiClient.post('/api/subscriptions/decrement/listing-count');
+    const response = await apiClient.post('/subscriptions/decrement/listing-count');
     return {
       success: true,
       data: { success: response.data.success },
@@ -127,7 +127,7 @@ export const decrementListingCount = async (): Promise<ApiResponse<{ success: bo
 
 export const checkJobPostLimit = async (): Promise<ApiResponse<JobPostCheckResult>> => {
   try {
-    const response = await apiClient.get('/api/subscriptions/check/job-post-limit');
+    const response = await apiClient.get('/subscriptions/check/job-post-limit');
     return {
       success: true,
       data: response.data,
@@ -151,7 +151,7 @@ export const checkJobPostLimit = async (): Promise<ApiResponse<JobPostCheckResul
 
 export const incrementJobPostCount = async (): Promise<ApiResponse<{ success: boolean }>> => {
   try {
-    const response = await apiClient.post('/api/subscriptions/increment/job-post-count');
+    const response = await apiClient.post('/subscriptions/increment/job-post-count');
     return {
       success: true,
       data: { success: response.data.success },
@@ -177,7 +177,7 @@ export const checkListingVisibility = async (
   userId: string
 ): Promise<ApiResponse<VisibilityCheckResult>> => {
   try {
-    const response = await apiClient.post('/api/subscriptions/check/listing-visibility', {
+    const response = await apiClient.post('/subscriptions/check/listing-visibility', {
       listingCreatedAt,
       userId,
     });
@@ -208,7 +208,7 @@ export const checkListingVisibility = async (
 
 export const checkNotificationPermission = async (): Promise<ApiResponse<{ allowed: boolean; subscription: any }>> => {
   try {
-    const response = await apiClient.get('/api/subscriptions/check/notification-permission');
+    const response = await apiClient.get('/subscriptions/check/notification-permission');
     return {
       success: true,
       data: response.data,
