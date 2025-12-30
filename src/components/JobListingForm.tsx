@@ -7,12 +7,17 @@ import { createJob } from '@/api/services/jobService';
 import { useAuth } from '@/context/AuthContext';
 import { checkJobPostLimit } from '@/api/services/subscriptionEnforcement';
 import { Alert } from '@/components/ui/alert';
+import { useNavigate } from 'react-router-dom';
 
 export function JobListingForm() {
+  const navigate = useNavigate();
   const { user, refreshSubscription } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingLimit, setCheckingLimit] = useState(true);
   const [jobLimitResult, setJobLimitResult] = useState<any>(null);
+
+  // If no user, don't render anything (Dashboard handles the loading state)
+  if (!user) return null;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -35,7 +40,9 @@ export function JobListingForm() {
 
   useEffect(() => {
     const checkLimit = async () => {
-      if (!user?.id) {
+      // Use user.id or fallback to _id if needed, though checkJobPostLimit uses token
+      const userId = user?.id || (user as any)?._id;
+      if (!userId) {
         setCheckingLimit(false);
         return;
       }

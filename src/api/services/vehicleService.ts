@@ -242,14 +242,16 @@ export const vehicleService = {
       // Upload to backend
       const response = await apiClient.uploadFiles('/upload/multiple', files, 'images');
       
-      const urls = response?.urls || (Array.isArray(response) ? response : []);
+      // response is an array of file objects from the backend (data.data)
+      const fileObjects = Array.isArray(response) ? response : [];
+      const urls = fileObjects.map((f: any) => f.url);
 
       return {
         success: true,
-        data: urls.map((url: string, index: number) => ({
-          url,
-          filename: files[index]?.name || `image-${index}`,
-          size: files[index]?.size || 0,
+        data: fileObjects.map((fileObj: any, index: number) => ({
+          url: fileObj.url,
+          filename: fileObj.filename || files[index]?.name || `image-${index}`,
+          size: fileObj.size || files[index]?.size || 0,
         })),
         message: `${urls.length} image(s) uploaded successfully`,
         timestamp: new Date().toISOString(),

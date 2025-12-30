@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
@@ -9,10 +10,18 @@ import { checkListingLimit, incrementListingCount } from '@/api/services/subscri
 import { Alert } from '@/components/ui/alert';
 
 export function ListingForm() {
+  const navigate = useNavigate();
   const { user, refreshSubscription } = useAuth();
   const [listingCheckResult, setListingCheckResult] = useState<any>(null);
   const [checkingLimit, setCheckingLimit] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   
+  // Remove the useEffect that redirects if user.id is missing
+  // ProtectedRoute handles the main auth check, and we'll handle the id check gracefully
+
+  // If no user, don't render anything (Dashboard handles the loading state)
+  if (!user) return null;
+
   const [formData, setFormData] = useState({
     title: '',
     manufacturer: '',
@@ -44,13 +53,14 @@ export function ListingForm() {
   // Check listing limit on component mount
   useEffect(() => {
     const checkLimit = async () => {
-      if (!user?.id) {
+      const userId = user?.id || (user as any)?._id;
+      if (!userId) {
         setCheckingLimit(false);
         return;
       }
 
       try {
-        const result = await checkListingLimit(user.id);
+        const result = await checkListingLimit(userId);
         setListingCheckResult(result.data);
       } catch (err) {
         console.error('Listing limit check error:', err);
@@ -60,7 +70,7 @@ export function ListingForm() {
     };
 
     checkLimit();
-  }, [user?.id]);
+  }, [user?.id, (user as any)?._id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -150,6 +160,13 @@ export function ListingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const userId = user?.id || (user as any)?._id;
+
+    if (!userId) {
+      toast.error('You must be logged in to create a listing');
+      return;
+    }
+
     // Check listing limit before submission
     if (listingCheckResult && !listingCheckResult.allowed) {
       toast.error(listingCheckResult.message || 'Listing limit reached');
@@ -161,17 +178,84 @@ export function ListingForm() {
       return;
     }
 
-    // Prepare image URLs for submission
-    const imageUrls = uploadedImages.map(img => img.url);
+    setSubmitting(true);
 
-    // Increment listing count if user has subscription
-    if (user?.id) {
-      await incrementListingCount(user.id);
-      await refreshSubscription();
+    try {
+      // Prepare image URLs for submission
+      const imageUrls = uploadedImages.map(img => img.url);
+
+      // Construct payload matching backend model
+      const payload: any = {
+        title: formData.title,
+        manufacturer: formData.manufacturer,
+        model: formData.model,
+        year: Number(formData.year),
+        type: formData.type,
+        price: Number(formData.price),
+        registrationNumber: formData.registrationNumber,
+        mileage: Number(formData.mileage),
+        condition: formData.condition,
+        description: formData.description,
+        images: imageUrls,
+        features: [], // Initialize empty features array if not in form
+      };
+
+      // Add nested objects if valid
+      if (formData.insuranceValid) {
+        payload.insurance = {
+          valid: true,
+          provider: formData.insuranceProvider,
+          expiryDate: formData.insuranceExpiry ? new Date(formData.insuranceExpiry) : undefined,
+        };
+      }
+
+      if (formData.fitnessValid) {
+        payload.fitness = {
+          valid: true,
+          expiryDate: formData.fitnessExpiry ? new Date(formData.fitnessExpiry) : undefined,
+        };
+      }
+
+      if (formData.roadTaxValid) {
+        payload.roadTax = {
+          valid: true,
+          expiryDate: formData.roadTaxExpiry ? new Date(formData.roadTaxExpiry) : undefined,
+        };
+      }
+
+      if (formData.permitValid) {
+        payload.permit = {
+          valid: true,
+          permitType: formData.permitType,
+          expiryDate: formData.permitExpiry ? new Date(formData.permitExpiry) : undefined,
+        };
+      }
+
+      // Call API to create vehicle
+      await api.vehicles.createVehicle(payload, userId);
+
+      // Increment listing count if user has subscription
+      if (userId) {
+        // Note: The backend createVehicle also increments listingsUsed, 
+        // but this helper might update local/subscription context state if needed.
+        // However, usually backend handling is source of truth.
+        // We'll keep it to ensure frontend state is in sync if needed.
+        try {
+          // We don't need to manually increment if backend does it, but let's refresh subscription
+          await refreshSubscription();
+        } catch (err) {
+          console.error('Failed to refresh subscription:', err);
+        }
+      }
+
+      toast.success('Listing created successfully!');
+      navigate('/dashboard'); // Redirect to dashboard
+    } catch (error: any) {
+      console.error('Failed to create listing:', error);
+      toast.error(error.error || 'Failed to create listing');
+    } finally {
+      setSubmitting(false);
     }
-
-    toast.success('Listing created successfully!');
-    console.log('Form data:', { ...formData, images: imageUrls });
   };
 
   return (
@@ -564,9 +648,10 @@ export function ListingForm() {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={uploading || uploadedImages.length === 0 || (listingCheckResult && !listingCheckResult.allowed)}
+                size="lg"
+                disabled={submitting || (listingCheckResult && !listingCheckResult.allowed)}
               >
-                {uploading ? 'Uploading images...' : 'Create Listing'}
+                {submitting ? 'Creating Listing...' : 'Create Listing'}
               </Button>
               {uploadedImages.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center mt-2">

@@ -24,8 +24,8 @@ import {
   getSuppliers,
   getSupplierStats,
   createSupplier,
-  rejectSupplier,
-  toggleVerification
+  toggleVerification,
+  rejectSupplier
 } from '@/api/services/supplierService';
 import { adminService } from '@/api/services/adminService';
 import * as subscriptionService from '@/api/services/subscriptionService';
@@ -59,8 +59,8 @@ export function SupplierManagement() {
     try {
       setIsLoading(true);
       const filters = isPendingView ? { status: 'pending' as const } : undefined;
-      const response = await getSuppliers(filters);
-      setSuppliers(response.data.items);
+      const response = await getSuppliers({ ...filters, pageSize: 100 });
+      setSuppliers(response.data?.items || []);
     } catch (error) {
       toast.error('Failed to load suppliers');
     } finally {
@@ -71,7 +71,7 @@ export function SupplierManagement() {
   const loadSupplierStats = async () => {
     try {
       const response = await getSupplierStats();
-      setSupplierStats(response.data);
+      setSupplierStats(response.data || { total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
     } catch (error) {
       console.error('Failed to load supplier stats');
     }
@@ -79,8 +79,8 @@ export function SupplierManagement() {
 
   const loadPlans = async () => {
     try {
-      const response = await subscriptionService.getAllPlans();
-      if (response.success) {
+      const response = await subscriptionService.getAllSubscriptionPlans();
+      if (response.success && Array.isArray(response.data)) {
         setPlans(response.data.filter((p: any) => p.planType === 'vendor' || p.planType === 'institute'));
       }
     } catch (error) {
@@ -124,7 +124,7 @@ export function SupplierManagement() {
 
   const handleRejectSupplier = async (id: string) => {
     try {
-      await rejectSupplier(id);
+      await adminService.approveSupplierStatus(id, { status: 'rejected' });
       toast.error('Supplier rejected');
       loadSuppliers();
       loadSupplierStats();
@@ -194,7 +194,7 @@ export function SupplierManagement() {
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
           <p className="text-muted-foreground mt-4">Loading suppliers...</p>
         </Card>
-      ) : suppliers.length === 0 ? (
+      ) : !suppliers?.length ? (
         <Card className="p-12 text-center">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground mb-2">No {isPendingView ? 'pending' : ''} suppliers found</p>
@@ -212,7 +212,7 @@ export function SupplierManagement() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.map(supplier => (
+          {suppliers?.map(supplier => (
             <div key={supplier.id} className="relative">
               <SupplierCard supplier={supplier} showStatus />
               <div className="absolute top-3 right-3 flex gap-2">
