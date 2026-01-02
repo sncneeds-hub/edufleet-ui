@@ -50,7 +50,6 @@ export const getActiveSubscriptionPlans = async (force = false): Promise<ApiResp
     data,
     timestamp: new Date().toISOString(),
   };
-  
   lastCacheTime = now;
   return plansCache;
 };
@@ -331,19 +330,45 @@ export const getAllSubscriptionRequests = async (
   if (filters?.status) params.append('status', filters.status);
   if (filters?.userId) params.append('userId', filters.userId);
   
-  const data = await apiClient.get<SubscriptionRequest[]>(`/subscriptions/requests?${params.toString()}`);
+  const data = await apiClient.get<any[]>(`/subscriptions/requests?${params.toString()}`);
+  
+  // Map backend response to frontend types
+  const mappedData = data.map(item => ({
+    ...item,
+    id: item._id || item.id,
+    user: item.userId,
+    userId: item.userId?._id || item.userId?.id || item.userId,
+    currentPlan: item.currentPlanId,
+    currentPlanId: item.currentPlanId?._id || item.currentPlanId,
+    requestedPlan: item.requestedPlanId,
+    requestedPlanId: item.requestedPlanId?._id || item.requestedPlanId,
+  }));
+
   return {
     success: true,
-    data,
+    data: mappedData,
     timestamp: new Date().toISOString(),
   };
 };
 
 export const getMySubscriptionRequests = async (): Promise<ApiResponse<SubscriptionRequest[]>> => {
-  const data = await apiClient.get<SubscriptionRequest[]>('/subscriptions/requests/my');
+  const data = await apiClient.get<any[]>('/subscriptions/requests/my');
+  
+  // Map backend response to frontend types
+  const mappedData = data.map(item => ({
+    ...item,
+    id: item._id || item.id,
+    user: item.userId,
+    userId: item.userId?._id || item.userId?.id || item.userId,
+    currentPlan: item.currentPlanId,
+    currentPlanId: item.currentPlanId?._id || item.currentPlanId,
+    requestedPlan: item.requestedPlanId,
+    requestedPlanId: item.requestedPlanId?._id || item.requestedPlanId,
+  }));
+
   return {
     success: true,
-    data,
+    data: mappedData,
     timestamp: new Date().toISOString(),
   };
 };

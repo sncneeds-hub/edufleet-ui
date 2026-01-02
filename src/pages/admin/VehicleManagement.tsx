@@ -29,7 +29,7 @@ export function VehicleManagement() {
 
   // Update priorities when vehicles load
   useEffect(() => {
-    const priorityIds = allVehicles.filter(v => v.isPriority).map(v => v.id);
+    const priorityIds = allVehicles.filter(v => v.isPriority).map(v => v.id || (v as any)._id);
     setPriorities(new Set(priorityIds));
   }, [allVehicles]);
 
@@ -40,8 +40,8 @@ export function VehicleManagement() {
       await approveVehicle(id);
       toast.success('Listing approved successfully');
       refetch();
-    } catch (error) {
-      toast.error('Failed to approve listing');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to approve listing');
     }
   };
 
@@ -50,8 +50,8 @@ export function VehicleManagement() {
       await rejectVehicle(id);
       toast.error('Listing rejected');
       refetch();
-    } catch (error) {
-      toast.error('Failed to reject listing');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to reject listing');
     }
   };
 
@@ -74,7 +74,7 @@ export function VehicleManagement() {
   };
 
   const handleApproveAll = async () => {
-    const pendingIds = displayVehicles.filter(v => v.status === 'pending').map(v => v.id);
+    const pendingIds = displayVehicles.filter(v => v.status === 'pending').map(v => v.id || (v as any)._id);
     if (pendingIds.length === 0) {
       toast.info('No pending listings to approve');
       return;
@@ -213,7 +213,7 @@ export function VehicleManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleApprove(vehicle.id)}
+                              onClick={() => handleApprove(vehicle.id || (vehicle as any)._id)}
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                               title="Approve"
                             >
@@ -222,7 +222,7 @@ export function VehicleManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleReject(vehicle.id)}
+                              onClick={() => handleReject(vehicle.id || (vehicle as any)._id)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               title="Reject"
                             >

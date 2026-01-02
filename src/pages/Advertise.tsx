@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAds } from '@/context/AdContext';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
 export function Advertise() {
   const navigate = useNavigate();
   const { submitAdRequest } = useAds();
+  const { isAuthenticated, user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,6 +24,18 @@ export function Advertise() {
     message: ''
   });
 
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        company: user.instituteName || '',
+        phone: user.phone || ''
+      }));
+    }
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -29,6 +43,17 @@ export function Advertise() {
 
   const handleSelectChange = (value: string) => {
     setFormData(prev => ({ ...prev, adType: value }));
+  };
+
+  const handleCreateAdClick = () => {
+    if (isAuthenticated) {
+      const element = document.getElementById('contact-form');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate('/signup');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,7 +90,7 @@ export function Advertise() {
             size="lg"
             variant="secondary"
             className="font-bold text-lg h-14 px-8 shadow-lg"
-            onClick={() => navigate('/signup')}
+            onClick={handleCreateAdClick}
           >
             Create Your Ad Now
           </Button>
@@ -235,7 +260,7 @@ export function Advertise() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-white font-bold h-12 px-8"
-              onClick={() => navigate('/signup')}
+              onClick={handleCreateAdClick}
             >
               Get Started
             </Button>

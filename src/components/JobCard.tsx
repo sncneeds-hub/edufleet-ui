@@ -37,6 +37,22 @@ const formatSalary = (salary: any): { min: number; max: number } => {
   return { min: 0, max: 0 };
 };
 
+// Helper function to format experience
+const formatExperience = (experience: any): string => {
+  if (!experience && experience !== 0) return 'Experience not specified';
+  if (typeof experience === 'string') return experience;
+  if (typeof experience === 'object') {
+    const min = experience.min;
+    const max = experience.max;
+    if (min !== undefined && max !== undefined) {
+      if (min === max) return `${min} years`;
+      return `${min}-${max} years`;
+    }
+    return 'Experience not specified';
+  }
+  return String(experience);
+};
+
 interface JobCardProps {
   job: Job;
   isListing?: boolean;

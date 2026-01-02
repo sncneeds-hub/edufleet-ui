@@ -8,12 +8,19 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { checkListingLimit, incrementListingCount } from '@/api/services/subscriptionEnforcement';
 import { Alert } from '@/components/ui/alert';
+import { Vehicle } from '@/api/types';
 
-export function ListingForm() {
+interface ListingFormProps {
+  listing?: Vehicle | null;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) {
   const navigate = useNavigate();
   const { user, refreshSubscription } = useAuth();
   const [listingCheckResult, setListingCheckResult] = useState<any>(null);
-  const [checkingLimit, setCheckingLimit] = useState(true);
+  const [checkingLimit, setCheckingLimit] = useState(!listing); // Only check limit if creating
   const [submitting, setSubmitting] = useState(false);
   
   // Remove the useEffect that redirects if user.id is missing
@@ -23,35 +30,45 @@ export function ListingForm() {
   if (!user) return null;
 
   const [formData, setFormData] = useState({
-    title: '',
-    manufacturer: '',
-    model: '',
-    year: new Date().getFullYear(),
-    type: 'school-bus',
-    price: '',
-    mileage: '',
-    condition: 'good',
-    registrationNumber: '',
-    description: '',
-    insuranceValid: false,
-    insuranceExpiry: '',
-    insuranceProvider: '',
-    fitnessValid: false,
-    fitnessExpiry: '',
-    roadTaxValid: false,
-    roadTaxExpiry: '',
-    permitValid: false,
-    permitExpiry: '',
-    permitType: '',
+    title: listing?.title || '',
+    manufacturer: listing?.manufacturer || '',
+    model: listing?.model || '',
+    year: listing?.year || new Date().getFullYear(),
+    type: listing?.type || 'school-bus',
+    price: listing?.price?.toString() || '',
+    mileage: listing?.mileage?.toString() || '',
+    condition: listing?.condition || 'good',
+    registrationNumber: listing?.registrationNumber || '',
+    description: listing?.description || '',
+    insuranceValid: listing?.insurance?.valid || false,
+    insuranceExpiry: listing?.insurance?.expiryDate ? new Date(listing.insurance.expiryDate).toISOString().split('T')[0] : '',
+    insuranceProvider: listing?.insurance?.provider || '',
+    fitnessValid: listing?.fitness?.valid || false,
+    fitnessExpiry: listing?.fitness?.expiryDate ? new Date(listing.fitness.expiryDate).toISOString().split('T')[0] : '',
+    roadTaxValid: listing?.roadTax?.valid || false,
+    roadTaxExpiry: listing?.roadTax?.expiryDate ? new Date(listing.roadTax.expiryDate).toISOString().split('T')[0] : '',
+    permitValid: listing?.permit?.valid || false,
+    permitExpiry: listing?.permit?.expiryDate ? new Date(listing.permit.expiryDate).toISOString().split('T')[0] : '',
+    permitType: listing?.permit?.permitType || '',
   });
 
-  const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; file: File; preview: string }>>([]);
+  const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; file?: File; preview: string }>>(() => {
+    if (listing?.images) {
+      return listing.images.map(url => ({
+        url,
+        preview: url
+      }));
+    }
+    return [];
+  });
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check listing limit on component mount
+  // Check listing limit on component mount only if creating new listing
   useEffect(() => {
+    if (listing) return;
+    
     const checkLimit = async () => {
       const userId = user?.id || (user as any)?._id;
       if (!userId) {
@@ -70,7 +87,7 @@ export function ListingForm() {
     };
 
     checkLimit();
-  }, [user?.id, (user as any)?._id]);
+  }, [user?.id, (user as any)?._id, listing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -132,8 +149,10 @@ export function ListingForm() {
   const handleRemoveImage = (index: number) => {
     setUploadedImages(prev => {
       const newImages = [...prev];
-      // Revoke preview URL to free memory
-      URL.revokeObjectURL(newImages[index].preview);
+      // Revoke preview URL to free memory if it was created locally
+      if (newImages[index].file) {
+        URL.revokeObjectURL(newImages[index].preview);
+      }
       newImages.splice(index, 1);
       return newImages;
     });
@@ -167,8 +186,8 @@ export function ListingForm() {
       return;
     }
 
-    // Check listing limit before submission
-    if (listingCheckResult && !listingCheckResult.allowed) {
+    // Check listing limit before submission only for new listings
+    if (!listing && listingCheckResult && !listingCheckResult.allowed) {
       toast.error(listingCheckResult.message || 'Listing limit reached');
       return;
     }
@@ -197,7 +216,7 @@ export function ListingForm() {
         condition: formData.condition,
         description: formData.description,
         images: imageUrls,
-        features: [], // Initialize empty features array if not in form
+        features: listing?.features || [], 
       };
 
       // Add nested objects if valid
@@ -231,28 +250,36 @@ export function ListingForm() {
         };
       }
 
-      // Call API to create vehicle
-      await api.vehicles.createVehicle(payload, userId);
-
-      // Increment listing count if user has subscription
-      if (userId) {
-        // Note: The backend createVehicle also increments listingsUsed, 
-        // but this helper might update local/subscription context state if needed.
-        // However, usually backend handling is source of truth.
-        // We'll keep it to ensure frontend state is in sync if needed.
-        try {
-          // We don't need to manually increment if backend does it, but let's refresh subscription
-          await refreshSubscription();
-        } catch (err) {
-          console.error('Failed to refresh subscription:', err);
+      if (listing) {
+        // Update existing vehicle
+        await api.vehicles.updateVehicle({
+          id: listing.id || (listing as any)._id,
+          ...payload
+        });
+        toast.success('Listing updated successfully!');
+      } else {
+        // Call API to create vehicle
+        await api.vehicles.createVehicle(payload, userId);
+        
+        // Increment listing count if user has subscription
+        if (userId) {
+          try {
+            await refreshSubscription();
+          } catch (err) {
+            console.error('Failed to refresh subscription:', err);
+          }
         }
+        toast.success('Listing created successfully!');
       }
 
-      toast.success('Listing created successfully!');
-      navigate('/dashboard'); // Redirect to dashboard
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/dashboard'); // Redirect to dashboard
+      }
     } catch (error: any) {
-      console.error('Failed to create listing:', error);
-      toast.error(error.error || 'Failed to create listing');
+      console.error('Failed to save listing:', error);
+      toast.error(error.error || `Failed to ${listing ? 'update' : 'create'} listing`);
     } finally {
       setSubmitting(false);
     }
@@ -260,10 +287,17 @@ export function ListingForm() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Create New Listing</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">{listing ? 'Edit Listing' : 'Create New Listing'}</h2>
+        {listing && onCancel && (
+          <Button variant="outline" onClick={onCancel}>
+            Cancel Edit
+          </Button>
+        )}
+      </div>
 
-      {/* Listing Limit Warning */}
-      {checkingLimit ? (
+      {/* Listing Limit Warning - Only show when creating */}
+      {!listing && checkingLimit ? (
         <div className="mb-6">
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -272,7 +306,7 @@ export function ListingForm() {
             </div>
           </Alert>
         </div>
-      ) : listingCheckResult && !listingCheckResult.allowed ? (
+      ) : !listing && listingCheckResult && !listingCheckResult.allowed ? (
         <div className="mb-6">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -284,7 +318,7 @@ export function ListingForm() {
             </div>
           </Alert>
         </div>
-      ) : listingCheckResult && listingCheckResult.remaining <= 2 ? (
+      ) : !listing && listingCheckResult && listingCheckResult.remaining <= 2 ? (
         <div className="mb-6">
           <Alert className="border-amber-200 bg-amber-50">
             <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -644,26 +678,38 @@ export function ListingForm() {
               />
             </div>
 
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border flex gap-3">
+              {listing && onCancel && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={onCancel}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+              )}
               <Button 
                 type="submit" 
-                className="w-full" 
+                className={listing && onCancel ? "flex-1" : "w-full"} 
                 size="lg"
-                disabled={submitting || (listingCheckResult && !listingCheckResult.allowed)}
+                disabled={submitting || (!listing && listingCheckResult && !listingCheckResult.allowed)}
               >
-                {submitting ? 'Creating Listing...' : 'Create Listing'}
+                {submitting ? (listing ? 'Updating...' : 'Creating Listing...') : (listing ? 'Update Listing' : 'Create Listing')}
               </Button>
-              {uploadedImages.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center mt-2">
-                  Please upload at least one image to create listing
-                </p>
-              )}
-              {listingCheckResult && !listingCheckResult.allowed && (
-                <p className="text-sm text-destructive text-center mt-2">
-                  Cannot create listing: {listingCheckResult.message}
-                </p>
-              )}
             </div>
+            
+            {uploadedImages.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                Please upload at least one image to {listing ? 'update' : 'create'} listing
+              </p>
+            )}
+            {!listing && listingCheckResult && !listingCheckResult.allowed && (
+              <p className="text-sm text-destructive text-center mt-2">
+                Cannot create listing: {listingCheckResult.message}
+              </p>
+            )}
           </form>
         </Card>
 

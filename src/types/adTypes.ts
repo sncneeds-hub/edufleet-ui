@@ -1,6 +1,7 @@
 export type AdType = 'image' | 'video' | 'html';
 export type AdPlacement = 'LP_TOP_BANNER' | 'LP_INLINE_1' | 'LP_INLINE_2' | 'LIST_SIDEBAR' | 'DASH_TOP';
 export type AdStatus = 'draft' | 'pending' | 'active' | 'paused' | 'expired' | 'rejected';
+export type AdPricingModel = 'cpm' | 'cpc' | 'fixed';
 
 export interface Ad {
   id: string;
@@ -17,6 +18,12 @@ export interface Ad {
   status: AdStatus;
   rejectionReason?: string;
   createdAt: string;
+  
+  // Budget and Plan
+  budget: number;
+  pricingModel: AdPricingModel;
+  currency: string;
+  targetLocation?: string;
   
   // Analytics stats
   impressions: number;

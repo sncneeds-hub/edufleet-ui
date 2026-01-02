@@ -23,12 +23,67 @@ import {
 import { toast } from 'sonner';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { MaskedContent } from '@/components/MaskedContent';
+import { jobService } from '@/api/services/jobService';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+const formatLocation = (location: any): string => {
+  if (!location) return 'Location not specified';
+  if (typeof location === 'string') return location;
+  if (typeof location === 'object') {
+    const parts = [location.city, location.state, location.country].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+  }
+  return String(location);
+};
+
+const formatExperience = (experience: any): string => {
+  if (!experience && experience !== 0) return 'Experience not specified';
+  if (typeof experience === 'string') return experience;
+  if (typeof experience === 'object') {
+    const min = experience.min;
+    const max = experience.max;
+    if (min !== undefined && max !== undefined) {
+      if (min === max) return `${min} years`;
+      return `${min}-${max} years`;
+    }
+    return 'Experience not specified';
+  }
+  return String(experience);
+};
 
 export function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { job, loading } = useJobById(id || '');
+  
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [hasApplied, setHasApplied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const checkApplicationStatus = async () => {
+      if (!user || user.role !== 'teacher' || !id) return;
+      try {
+        const response = await jobService.getMyApplications();
+        const applied = response.some((app: any) => app.jobId === id || (app.jobId && app.jobId._id === id));
+        setHasApplied(applied);
+      } catch (error) {
+        console.error('Failed to check application status', error);
+      }
+    };
+    
+    checkApplicationStatus();
+  }, [user, id]);
 
   if (loading) {
     return (
@@ -66,7 +121,50 @@ export function JobDetails() {
       navigate('/login');
       return;
     }
-    toast.success('Application submitted!');
+    if (user.role !== 'teacher') {
+      toast.error('Only teachers can apply for jobs. Please login as a teacher.');
+      return;
+    }
+    if (hasApplied) {
+      toast.info('You have already applied to this job');
+      return;
+    }
+    setShowApplyDialog(true);
+  };
+
+  const submitApplication = async () => {
+    if (!coverLetter.trim()) {
+      toast.error('Please write a cover letter');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await jobService.applyToJob(id!, {
+        coverLetter,
+        applicantName: user?.name || '',
+        applicantEmail: user?.email || '',
+        status: 'pending',
+        appliedAt: new Date().toISOString(),
+        jobId: id!,
+        applicantId: user?.id || ''
+      });
+      
+      toast.success('Application submitted successfully!');
+      setShowApplyDialog(false);
+      setCoverLetter('');
+      setHasApplied(true);
+      
+      // Navigate to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/teacher/dashboard');
+      }, 1500);
+    } catch (error) {
+      toast.error('Failed to submit application');
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -99,15 +197,15 @@ export function JobDetails() {
                   <div className="flex flex-wrap gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>{job.location}</span>
+                      <span>{formatLocation(job.location)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-muted-foreground" />
-                      <span>{job.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                      <span>{job.type ? job.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Full Time'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>{job.experience}</span>
+                      <span>{formatExperience(job.experience)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -150,7 +248,7 @@ export function JobDetails() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Requirements</h2>
               <ul className="space-y-2">
-                {job.requirements.map((req, index) => (
+                {job.requirements?.map((req, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <span className="text-muted-foreground">{req}</span>
@@ -163,7 +261,7 @@ export function JobDetails() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Responsibilities</h2>
               <ul className="space-y-2">
-                {job.responsibilities.map((resp, index) => (
+                {job.responsibilities?.map((resp, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
                     <span className="text-muted-foreground">{resp}</span>
@@ -237,8 +335,9 @@ export function JobDetails() {
                 className="w-full mb-4" 
                 size="lg"
                 onClick={handleApply}
+                disabled={hasApplied}
               >
-                {user ? 'Apply Now' : 'Login to Apply'}
+                {user ? (hasApplied ? 'Already Applied' : 'Apply Now') : 'Login to Apply'}
               </Button>
 
               <div className="border-t border-border pt-4 space-y-3">
@@ -266,6 +365,58 @@ export function JobDetails() {
           </div>
         </div>
       </div>
+
+      {/* Apply Dialog */}
+      <Dialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Apply for {job.title}</DialogTitle>
+            <DialogDescription>
+              Submit your application to {job.instituteName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="coverLetter">Cover Letter *</Label>
+              <Textarea
+                id="coverLetter"
+                value={coverLetter}
+                onChange={(e) => setCoverLetter(e.target.value)}
+                placeholder="Tell us why you're a great fit for this position..."
+                rows={8}
+                className="mt-2"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Your profile information will be automatically included:</p>
+              <ul className="list-disc list-inside mt-2">
+                <li>Name: {user?.name}</li>
+                <li>Email: {user?.email}</li>
+                <li>Phone: {user?.phone}</li>
+                <li>Qualifications: {user?.qualifications?.join(', ')}</li>
+                <li>Experience: {user?.experience} years</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowApplyDialog(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1"
+                onClick={submitApplication}
+                disabled={submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit Application'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

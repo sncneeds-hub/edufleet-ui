@@ -57,6 +57,7 @@ export const AdTable: React.FC<AdTableProps> = ({ ads, onEdit, onDelete, onToggl
             <TableHead>Ad Details</TableHead>
             <TableHead>Placement</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Budget & Plan</TableHead>
             <TableHead>Stats</TableHead>
             <TableHead>Duration</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -65,7 +66,7 @@ export const AdTable: React.FC<AdTableProps> = ({ ads, onEdit, onDelete, onToggl
         <TableBody>
           {ads.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center h-32 text-muted-foreground">
                 No ads found.
               </TableCell>
             </TableRow>
@@ -85,6 +86,12 @@ export const AdTable: React.FC<AdTableProps> = ({ ads, onEdit, onDelete, onToggl
                   <Badge className={getStatusColor(ad.status)} variant="secondary">
                     {ad.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="text-xs space-y-1">
+                    <div>{ad.currency} {ad.budget.toLocaleString()}</div>
+                    <div className="uppercase text-muted-foreground">{ad.pricingModel}</div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="text-xs space-y-1">
@@ -169,6 +176,20 @@ export const AdTable: React.FC<AdTableProps> = ({ ads, onEdit, onDelete, onToggl
                   <p className="text-sm font-medium text-muted-foreground">Priority</p>
                   <p className="text-base mt-1">{selectedAd.priority}/10</p>
                 </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Budget</p>
+                  <p className="text-base mt-1">{selectedAd.currency} {selectedAd.budget.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Pricing Model</p>
+                  <p className="text-base mt-1 uppercase">{selectedAd.pricingModel}</p>
+                </div>
+                {selectedAd.targetLocation && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Target Location</p>
+                    <p className="text-base mt-1">{selectedAd.targetLocation}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Start Date</p>
                   <p className="text-base mt-1">{format(new Date(selectedAd.startDate), 'MMM dd, yyyy')}</p>

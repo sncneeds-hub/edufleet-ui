@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { Ad, AdStatus, AdPlacement, AdRequest } from '../types/adTypes';
+import { useAuth } from './AuthContext';
+import { toast } from 'sonner';
 
 interface AdContextType {
   ads: Ad[];
@@ -17,25 +19,42 @@ interface AdContextType {
 const AdContext = createContext<AdContextType | undefined>(undefined);
 
 export const AdProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [ads, setAds] = useState<Ad[]>([]);
   const [adRequests, setAdRequests] = useState<AdRequest[]>([]);
 
   const addAd = (newAd: Omit<Ad, 'id' | 'createdAt' | 'impressions' | 'clicks'>) => {
+    if (user?.role !== 'admin') {
+      toast.error("Unauthorized: Only admins can create ads");
+      return;
+    }
+
     const ad: Ad = {
       ...newAd,
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
       impressions: 0,
       clicks: 0,
+      budget: newAd.budget || 0,
+      pricingModel: newAd.pricingModel || 'fixed',
+      currency: newAd.currency || 'USD',
     };
     setAds([...ads, ad]);
   };
 
   const updateAd = (id: string, updates: Partial<Ad>) => {
+    if (user?.role !== 'admin') {
+      toast.error("Unauthorized: Only admins can update ads");
+      return;
+    }
     setAds(ads.map(ad => ad.id === id ? { ...ad, ...updates } : ad));
   };
 
   const deleteAd = (id: string) => {
+    if (user?.role !== 'admin') {
+      toast.error("Unauthorized: Only admins can delete ads");
+      return;
+    }
     setAds(ads.filter(ad => ad.id !== id));
   };
 
@@ -68,6 +87,10 @@ export const AdProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const updateAdRequestStatus = (id: string, status: AdRequest['status']) => {
+    if (user?.role !== 'admin') {
+      toast.error("Unauthorized: Only admins can update request status");
+      return;
+    }
     setAdRequests(prev => prev.map(req => 
       req.id === id ? { ...req, status } : req
     ));

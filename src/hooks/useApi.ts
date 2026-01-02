@@ -375,7 +375,7 @@ export function useAdminActions() {
       });
       return response;
     } catch (err: any) {
-      setError(err.error || 'Failed to approve vehicle');
+      setError(err.message || err.error || 'Failed to approve vehicle');
       console.error('Error approving vehicle:', err);
       throw err;
     } finally {
@@ -393,7 +393,7 @@ export function useAdminActions() {
       });
       return response;
     } catch (err: any) {
-      setError(err.error || 'Failed to reject vehicle');
+      setError(err.message || err.error || 'Failed to reject vehicle');
       console.error('Error rejecting vehicle:', err);
       throw err;
     } finally {
@@ -496,6 +496,35 @@ export function useJobById(id: string) {
   }, [id]);
 
   return { job, loading, error };
+}
+
+/**
+ * Hook to fetch applications (for Institute)
+ */
+export function useApplications(params?: { jobId?: string }) {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.jobs.getJobApplications(params);
+      setApplications(response.data || []);
+    } catch (err: any) {
+      setError(err.error || 'Failed to load applications');
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [JSON.stringify(params)]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { applications, loading, error, refetch };
 }
 
 /**

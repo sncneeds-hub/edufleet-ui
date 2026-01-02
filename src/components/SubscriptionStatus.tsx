@@ -155,19 +155,33 @@ export function SubscriptionStatus({
       
       // Determine request type
       const currentPlanId = subscription?.subscriptionPlanId;
-      const currentPlanObj = plans.find((p: any) => String(p.id) === String(currentPlanId));
+      // Handle both id and _id for plan comparison
+      const currentPlanObj = plans.find((p: any) => String(p.id || p._id) === String(currentPlanId));
       
       let requestType: 'upgrade' | 'downgrade' | 'renewal' = 'upgrade';
       if (currentPlanObj) {
         if (requestDialog.plan.price < currentPlanObj.price) {
           requestType = 'downgrade';
-        } else if (String(requestDialog.plan.id) === String(currentPlanId)) {
+        } else if (String(requestDialog.plan.id || requestDialog.plan._id) === String(currentPlanId)) {
           requestType = 'renewal';
         }
       }
 
+      // Handle both id and _id from the plan object
+      const requestedPlanId = requestDialog.plan.id || requestDialog.plan._id;
+      
+      if (!requestedPlanId) {
+        throw new Error('Invalid plan selected (missing ID)');
+      }
+
+      console.log('Submitting subscription request:', {
+        requestedPlanId,
+        requestType,
+        userNotes: requestDialog.notes
+      });
+
       const response = await createSubscriptionRequest({
-        requestedPlanId: requestDialog.plan.id,
+        requestedPlanId,
         requestType,
         userNotes: requestDialog.notes
       });
@@ -423,14 +437,15 @@ export function SubscriptionStatus({
           <h3 className="text-xl font-bold mb-4">Plan Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {filteredPlans.map((plan) => {
-              const current = isCurrentPlan(plan.id);
-              const pending = hasPendingRequest(plan.id);
+              const planId = plan.id || plan._id;
+              const current = isCurrentPlan(planId);
+              const pending = hasPendingRequest(planId);
               
-              const currentPlanObj = plans.find(p => isCurrentPlan(p.id));
+              const currentPlanObj = plans.find(p => isCurrentPlan(p.id || p._id));
               const isUpgrade = currentPlanObj ? plan.price > currentPlanObj.price : true;
               
               return (
-                <Card key={plan.id} className={`p-6 flex flex-col ${current ? 'border-primary ring-1 ring-primary' : ''}`}>
+                <Card key={planId} className={`p-6 flex flex-col ${current ? 'border-primary ring-1 ring-primary' : ''}`}>
                   <div className="mb-4">
                     <h4 className="font-bold text-lg">{plan.displayName}</h4>
                     <p className="text-2xl font-bold mt-2">
@@ -541,7 +556,7 @@ export function SubscriptionStatus({
           <DialogHeader>
             <DialogTitle>Request Subscription Change</DialogTitle>
             <DialogDescription>
-              Submit a request to {requestDialog.plan?.price > (plans.find(p => isCurrentPlan(p.id))?.price || 0) ? 'upgrade' : 'downgrade'} your plan to <strong>{requestDialog.plan?.displayName}</strong>.
+              Submit a request to {requestDialog.plan?.price > (plans.find(p => isCurrentPlan(p.id || p._id))?.price || 0) ? 'upgrade' : 'downgrade'} your plan to <strong>{requestDialog.plan?.displayName}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

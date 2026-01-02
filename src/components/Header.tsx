@@ -7,9 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, LogOut, LayoutDashboard, Megaphone, Bell, Search, UserCircle } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Megaphone, Bell, Search, UserCircle, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationBell } from '@/components/NotificationBell';
+import { Badge } from '@/components/ui/badge';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -91,7 +92,7 @@ export function Header() {
             <nav className="flex items-center gap-7 text-sm font-medium">
               {!shouldShowTeacherNav && (
                 <>
-                  <Link to="/browse" className="text-foreground/70 hover:text-primary transition-all relative group">
+                  <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Vehicles</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>
@@ -140,8 +141,16 @@ export function Header() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-60 shadow-lg">
                       <div className="px-3 py-2.5 border-b border-border">
-                        <div className="text-sm font-semibold text-foreground">{user.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{user.email}</div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-semibold text-foreground truncate max-w-[140px]">{user.name}</div>
+                          {user.subscription?.planId?.displayName && (
+                            <Badge variant="outline" className="text-[10px] h-5 bg-primary/5 text-primary border-primary/20 px-1.5 flex items-center gap-1">
+                              <Crown className="w-2.5 h-2.5" />
+                              {(user.subscription.planId as any).displayName}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                       </div>
                       <DropdownMenuItem onClick={() => handleDashboard()} className="cursor-pointer py-2.5 px-3">
                         <LayoutDashboard className="w-4 h-4 mr-3" />
@@ -191,7 +200,7 @@ export function Header() {
             <div className="grid grid-cols-2 gap-2 mb-4">
               {!shouldShowTeacherNav ? (
                 <>
-                  <Link to="/browse" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Vehicles</span>
                   </Link>
                   <Link to="/jobs" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">

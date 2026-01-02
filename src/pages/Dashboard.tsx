@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useMyListings, useMyJobs } from '@/hooks/useApi';
+import { useMyListings, useMyJobs, useVehicleActions } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VehicleCard } from '@/components/VehicleCard';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { ListingForm } from '@/components/ListingForm';
 import { JobListingForm } from '@/components/JobListingForm';
+import { ApplicantsList } from '@/components/ApplicantsList';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { SubscriptionAlert } from '@/components/SubscriptionAlert';
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { Vehicle } from '@/api/types';
 
 import { AdSlot } from '@/components/ads/AdSlot';
 
@@ -41,7 +43,9 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   const queryTab = queryParams.get('tab');
 
   const [activeTab, setActiveTab] = useState(queryTab || initialTab);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editingListing, setEditingListing] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     if (queryTab) {
@@ -58,6 +62,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
 
   const { listings: userListings, loading: listingsLoading, refetch: refetchListings } = useMyListings(user?.id);
   const { jobs: userJobs, loading: jobsLoading, refetch: refetchJobs } = useMyJobs();
+  const { deleteVehicle } = useVehicleActions();
 
   useEffect(() => {
     if (user?.id) {
@@ -74,6 +79,13 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
       ensureSubscription(true);
     }
   }, [activeTab, ensureSubscription, user?.id]);
+
+  useEffect(() => {
+    // Clear editing state when switching away from create tab unless we just set it
+    if (activeTab !== 'create') {
+       // We don't clear here because switching TO create is how we edit
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (user) {
@@ -93,6 +105,36 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Failed to update profile:', error);
+    }
+  };
+
+  const handleListingCreateSuccess = async () => {
+    setEditingListing(null);
+    setActiveTab('listings');
+    await refetchListings();
+  };
+
+  const handleJobCreateSuccess = async () => {
+    setActiveTab('jobs');
+    await refetchJobs();
+  };
+  
+  const handleEditListing = (vehicle: Vehicle) => {
+    setEditingListing(vehicle);
+    setActiveTab('create');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteListing = async (vehicleId: string) => {
+    if (window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      try {
+        await deleteVehicle(vehicleId);
+        toast.success('Listing deleted successfully');
+        refetchListings();
+      } catch (error) {
+        console.error('Failed to delete listing:', error);
+        toast.error('Failed to delete listing');
+      }
     }
   };
   
@@ -128,7 +170,10 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
         title: "Create Your First Listing",
         description: "Start selling your used transport vehicles by creating a listing on EduFleet Exchange.",
         action: "Create Listing",
-        onClick: () => setActiveTab('create'),
+        onClick: () => {
+          setEditingListing(null);
+          setActiveTab('create');
+        },
         variant: 'default' as const
       };
     }
@@ -137,7 +182,10 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
         title: "Track Approval Status",
         description: `You have ${stats.pendingApprovals} listing(s) waiting for admin approval. Check their status here.`,
         action: "View Status",
-        onClick: () => setActiveTab('listings'),
+        onClick: () => {
+          setActiveTab('listings');
+          setStatusFilter('pending');
+        },
         variant: 'secondary' as const
       };
     }
@@ -256,14 +304,17 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
             My Listings
           </button>
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => {
+              setEditingListing(null);
+              setActiveTab('create');
+            }}
             className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
               activeTab === 'create'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            Create Listing
+            {editingListing ? 'Edit Listing' : 'Create Listing'}
           </button>
           <button
             onClick={() => setActiveTab('jobs')}
@@ -284,6 +335,16 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
             }`}
           >
             Create Job
+          </button>
+          <button
+            onClick={() => setActiveTab('applications')}
+            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+              activeTab === 'applications'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Applications
           </button>
           <button
             onClick={() => setActiveTab('profile')}
@@ -435,30 +496,74 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                     You have reached the maximum number of job posts ({maxJobs}) allowed on your current plan.
                     Please upgrade to a Professional or higher plan to post more jobs.
                   </p>
-                  <Button onClick={() => setActiveTab('profile')} className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={() => setActiveTab('subscription')} className="bg-amber-600 hover:bg-amber-700">
                     Upgrade Plan
                   </Button>
                 </div>
               </Card>
             ) : (
-              <JobListingForm />
+              <JobListingForm onSuccess={handleJobCreateSuccess} />
             )}
+          </div>
+        ) : activeTab === 'applications' ? (
+          <div>
+            <ApplicantsList />
           </div>
         ) : activeTab === 'listings' ? (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">My Listings</h2>
-              <Button onClick={() => setActiveTab('create')} className="gap-2">
+              <Button onClick={() => {
+                setEditingListing(null);
+                setActiveTab('create');
+              }} className="gap-2">
                 <Plus className="w-4 h-4" />
                 New Listing
               </Button>
             </div>
 
-            {userListings.length > 0 ? (
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              <Button 
+                variant={statusFilter === 'all' ? 'default' : 'outline'} 
+                onClick={() => setStatusFilter('all')} 
+                size="sm"
+                className="rounded-full"
+              >
+                All
+              </Button>
+              <Button 
+                variant={statusFilter === 'approved' ? 'default' : 'outline'} 
+                onClick={() => setStatusFilter('approved')} 
+                size="sm"
+                className="rounded-full"
+              >
+                Active
+              </Button>
+              <Button 
+                variant={statusFilter === 'pending' ? 'default' : 'outline'} 
+                onClick={() => setStatusFilter('pending')} 
+                size="sm"
+                className="rounded-full"
+              >
+                Pending
+              </Button>
+              <Button 
+                variant={statusFilter === 'rejected' ? 'default' : 'outline'} 
+                onClick={() => setStatusFilter('rejected')} 
+                size="sm"
+                className="rounded-full"
+              >
+                Rejected
+              </Button>
+            </div>
+
+            {userListings.filter(v => statusFilter === 'all' || v.status === statusFilter).length > 0 ? (
               <>
                 {/* Grid View */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {userListings.map((vehicle) => (
+                  {userListings
+                    .filter(v => statusFilter === 'all' || v.status === statusFilter)
+                    .map((vehicle) => (
                     <VehicleCard key={vehicle.id || (vehicle as any)._id} vehicle={vehicle} isListing={true} />
                   ))}
                 </div>
@@ -478,7 +583,9 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {userListings.map((vehicle) => (
+                        {userListings
+                          .filter(v => statusFilter === 'all' || v.status === statusFilter)
+                          .map((vehicle) => (
                           <TableRow key={vehicle.id || (vehicle as any)._id}>
                             <TableCell>
                               <div>
@@ -511,10 +618,21 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" title="Edit">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Edit"
+                                  onClick={() => handleEditListing(vehicle)}
+                                >
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Delete">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-red-600 hover:text-red-700" 
+                                  title="Delete"
+                                  onClick={() => handleDeleteListing(vehicle.id || (vehicle as any)._id)}
+                                >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
@@ -528,8 +646,15 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
               </>
             ) : (
               <Card className="p-12 text-center">
-                <p className="text-muted-foreground mb-4">No listings yet</p>
-                <Button onClick={() => setActiveTab('create')}>Create First Listing</Button>
+                <p className="text-muted-foreground mb-4">
+                  {statusFilter === 'all' 
+                    ? "No listings yet" 
+                    : `No ${statusFilter} listings found`}
+                </p>
+                <Button onClick={() => {
+                  setEditingListing(null);
+                  setActiveTab('create');
+                }}>Create First Listing</Button>
               </Card>
             )}
           </div>
@@ -543,12 +668,12 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                     Your current plan does not allow advertising vehicles. 
                     Please upgrade to a Professional or higher plan to start listing your vehicles.
                   </p>
-                  <Button onClick={() => setActiveTab('profile')} className="bg-blue-600 hover:bg-blue-700">
+                  <Button onClick={() => setActiveTab('subscription')} className="bg-blue-600 hover:bg-blue-700">
                     View Upgrade Options
                   </Button>
                 </div>
               </Card>
-            ) : listingLimitReached ? (
+            ) : listingLimitReached && !editingListing ? (
               <Card className="p-12 text-center bg-amber-50 border-amber-200">
                 <div className="max-w-md mx-auto">
                   <h3 className="text-xl font-bold text-amber-900 mb-2">Listing Limit Reached</h3>
@@ -556,13 +681,20 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                     You have reached the maximum number of vehicle listings ({maxListings}) allowed on your current plan.
                     Please upgrade to a Business or higher plan to list more vehicles.
                   </p>
-                  <Button onClick={() => setActiveTab('profile')} className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={() => setActiveTab('subscription')} className="bg-amber-600 hover:bg-amber-700">
                     Upgrade Plan
                   </Button>
                 </div>
               </Card>
             ) : (
-              <ListingForm />
+              <ListingForm 
+                listing={editingListing} 
+                onSuccess={handleListingCreateSuccess}
+                onCancel={() => {
+                  setEditingListing(null);
+                  setActiveTab('listings');
+                }}
+              />
             )}
           </div>
         ) : activeTab === 'profile' ? (
@@ -712,7 +844,14 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
             </Card>
           </div>
         ) : (
-          <ListingForm />
+          <ListingForm 
+            listing={editingListing} 
+            onSuccess={handleListingCreateSuccess}
+            onCancel={() => {
+              setEditingListing(null);
+              setActiveTab('listings');
+            }}
+          />
         )}
       </div>
     </div>

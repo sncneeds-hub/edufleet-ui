@@ -12,10 +12,10 @@ export interface Job {
   title: string;
   institute: string;
   instituteName?: string;
-  location: string;
+  location: string | { city: string; state: string; country: string };
   type: 'full-time' | 'part-time' | 'contract';
   department?: string;
-  experience: string;
+  experience: string | { min: number; max: number };
   salary: string | { min?: number; max?: number };
   description: string;
   requirements: string[];

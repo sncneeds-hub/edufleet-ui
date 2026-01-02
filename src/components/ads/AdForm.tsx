@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Ad, AdPlacement, AdType, AdStatus } from '../../types/adTypes';
+import { Ad, AdPlacement, AdType, AdStatus, AdPricingModel } from '../../types/adTypes';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -27,6 +27,10 @@ export const AdForm: React.FC<AdFormProps> = ({ initialData, onSubmit, isSubmitt
     startDate: initialData?.startDate || '',
     endDate: initialData?.endDate || '',
     status: initialData?.status || 'draft' as AdStatus,
+    budget: initialData?.budget || 0,
+    pricingModel: initialData?.pricingModel || 'fixed' as AdPricingModel,
+    currency: initialData?.currency || 'USD',
+    targetLocation: initialData?.targetLocation || '',
   });
 
   const handleChange = (field: string, value: any) => {
@@ -199,6 +203,47 @@ export const AdForm: React.FC<AdFormProps> = ({ initialData, onSubmit, isSubmitt
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget ({formData.currency})</Label>
+              <Input
+                id="budget"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.budget}
+                onChange={(e) => handleChange('budget', parseFloat(e.target.value))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pricing Model</Label>
+              <Select
+                value={formData.pricingModel}
+                onValueChange={(value) => handleChange('pricingModel', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Pricing Model" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed Price</SelectItem>
+                  <SelectItem value="cpm">CPM (Cost per 1k views)</SelectItem>
+                  <SelectItem value="cpc">CPC (Cost per click)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="targetLocation">Target Location (Optional)</Label>
+              <Input
+                id="targetLocation"
+                value={formData.targetLocation}
+                onChange={(e) => handleChange('targetLocation', e.target.value)}
+                placeholder="e.g. New York, USA"
+              />
+            </div>
+
           </div>
 
           <div className="flex justify-end gap-4 pt-4">

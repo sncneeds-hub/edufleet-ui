@@ -60,7 +60,13 @@ export function SupplierManagement() {
       setIsLoading(true);
       const filters = isPendingView ? { status: 'pending' as const } : undefined;
       const response = await getSuppliers({ ...filters, pageSize: 100 });
-      setSuppliers(response.data?.items || []);
+      // Normalize items to ensure id exists (fallback to _id if id is missing)
+      const items = response.data?.items || [];
+      const normalizedItems = items.map((item: any) => ({
+        ...item,
+        id: item.id || item._id
+      }));
+      setSuppliers(normalizedItems);
     } catch (error) {
       toast.error('Failed to load suppliers');
     } finally {

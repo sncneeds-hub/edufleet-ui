@@ -31,7 +31,7 @@ import {
   SearchX
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Switch } from '@/components/ui/switch';
@@ -42,7 +42,11 @@ import { SubscriptionUsageCard } from '@/components/SubscriptionUsageCard';
 export function TeacherDashboard() {
   const { user, updateProfile, refreshProfile, subscription, ensureSubscription } = useAuth();
   const { applications, loading: appsLoading, refetch: refetchApps } = useMyApplications();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialTab = queryParams.get('tab') || 'profile';
   
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: user?.name || '',
@@ -64,7 +68,14 @@ export function TeacherDashboard() {
       ensureSubscription();
       refetchApps();
     }
-  }, [user?.id, ensureSubscription, refetchApps]);
+  }, [user?.id, refreshProfile, ensureSubscription, refetchApps]);
+
+  useEffect(() => {
+    const tab = queryParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (user) {
@@ -202,7 +213,7 @@ export function TeacherDashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="applications">

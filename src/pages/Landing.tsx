@@ -14,9 +14,12 @@ import {
 import { api } from '@/api';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { PricingSection } from '@/components/PricingSection';
+import { useAuth } from '@/context/AuthContext';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isTeacher = user?.role === 'teacher';
   const { listings: priorityListings = [], loading: priorityLoading } = usePriorityListings();
   
   // Handle hash scroll
@@ -227,34 +230,36 @@ export function Landing() {
         <AdSlot placement="LP_TOP_BANNER" variant="banner" />
       </div>
 
-      {/* Feature Section 1: Vehicles */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Truck className="w-6 h-6 text-primary" />
-            Premium Vehicles
-          </h2>
-          <Button variant="link" onClick={() => navigate('/browse')} className="text-primary">
-            View All
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {priorityLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="w-full h-[350px] rounded-lg" />
-            ))
-          ) : priorityListings.length > 0 ? (
-            priorityListings.slice(0, 4).map((vehicle) => (
-              <div key={vehicle.id || (vehicle as any)._id} className="h-full">
-                <VehicleCard vehicle={vehicle} />
-              </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground text-center col-span-full py-8">No featured listings available</p>
-          )}
-        </div>
-      </section>
+      {/* Feature Section 1: Vehicles - Hidden for Teachers */}
+      {!isTeacher && (
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Truck className="w-6 h-6 text-primary" />
+              Premium Vehicles
+            </h2>
+            <Button variant="link" onClick={() => navigate('/browse')} className="text-primary">
+              View All
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {priorityLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="w-full h-[350px] rounded-lg" />
+              ))
+            ) : priorityListings.length > 0 ? (
+              priorityListings.slice(0, 4).map((vehicle) => (
+                <div key={vehicle.id || (vehicle as any)._id} className="h-full">
+                  <VehicleCard vehicle={vehicle} />
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center col-span-full py-8">No featured listings available</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Feature Section 2: Jobs */}
       <section className="bg-slate-50 py-12">
@@ -291,32 +296,34 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Feature Section 3: Suppliers */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-green-600" />
-            Top Suppliers
-          </h2>
-          <Button variant="link" onClick={() => navigate('/suppliers')} className="text-green-600">
-            View All
-          </Button>
-        </div>
+      {/* Feature Section 3: Suppliers - Hidden for Teachers */}
+      {!isTeacher && (
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Building2 className="w-6 h-6 text-green-600" />
+              Top Suppliers
+            </h2>
+            <Button variant="link" onClick={() => navigate('/suppliers')} className="text-green-600">
+              View All
+            </Button>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {suppliersLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="w-full h-48 rounded-lg" />
-            ))
-          ) : featuredSuppliers.length > 0 ? (
-            featuredSuppliers.map((supplier) => (
-              <SupplierCard key={supplier.id || (supplier as any)._id} supplier={supplier} />
-            ))
-          ) : (
-            <p className="text-muted-foreground text-center col-span-full py-8">No suppliers available</p>
-          )}
-        </div>
-      </section>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {suppliersLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="w-full h-48 rounded-lg" />
+              ))
+            ) : featuredSuppliers.length > 0 ? (
+              featuredSuppliers.map((supplier) => (
+                <SupplierCard key={supplier.id || (supplier as any)._id} supplier={supplier} />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center col-span-full py-8">No suppliers available</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Inline Ad */}
       <div className="container mx-auto px-4 pb-12">

@@ -29,6 +29,47 @@ import {
 import { toast } from 'sonner';
 import { AdSlot } from '@/components/ads/AdSlot';
 
+const formatLocation = (location: any): string => {
+  if (!location) return 'Location not specified';
+  if (typeof location === 'string') return location;
+  if (typeof location === 'object') {
+    const parts = [location.city, location.state, location.country].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+  }
+  return String(location);
+};
+
+const formatSalary = (salary: any): string => {
+  if (!salary) return 'Salary not specified';
+  if (typeof salary === 'string') return salary;
+  if (typeof salary === 'object') {
+    const min = salary.min || salary.salaryMin;
+    const max = salary.max || salary.salaryMax;
+    const currency = salary.currency || '₹';
+    
+    if (min && max) {
+      return `${currency}${(min/1000).toFixed(0)}k - ${currency}${(max/1000).toFixed(0)}k`;
+    }
+    return 'Salary not specified';
+  }
+  return String(salary);
+};
+
+const formatExperience = (experience: any): string => {
+  if (!experience && experience !== 0) return 'Experience not specified';
+  if (typeof experience === 'string') return experience;
+  if (typeof experience === 'object') {
+    const min = experience.min;
+    const max = experience.max;
+    if (min !== undefined && max !== undefined) {
+      if (min === max) return `${min} years`;
+      return `${min}-${max} years`;
+    }
+    return 'Experience not specified';
+  }
+  return String(experience);
+};
+
 export function TeacherJobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -184,7 +225,7 @@ export function TeacherJobDetails() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{job.location}</span>
+                    <span>{formatLocation(job.location)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -194,11 +235,11 @@ export function TeacherJobDetails() {
                   </div>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>{job.salary}</span>
+                    <span>{formatSalary(job.salary)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{job.experience} experience</span>
+                    <span>{formatExperience(job.experience)} experience</span>
                   </div>
                 </div>
 

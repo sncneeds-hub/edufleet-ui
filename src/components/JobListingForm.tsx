@@ -9,7 +9,11 @@ import { checkJobPostLimit } from '@/api/services/subscriptionEnforcement';
 import { Alert } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 
-export function JobListingForm() {
+interface JobListingFormProps {
+  onSuccess?: () => void;
+}
+
+export function JobListingForm({ onSuccess }: JobListingFormProps) {
   const navigate = useNavigate();
   const { user, refreshSubscription } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -241,6 +245,10 @@ export function JobListingForm() {
         setBenefits(['']);
         setSubjects(['']);
         setQualifications(['']);
+        
+        if (onSuccess) {
+          onSuccess();
+        }
       }
     } catch (error: any) {
       console.error('Job creation error:', error);

@@ -100,7 +100,7 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
               
               <div className="flex gap-2 flex-shrink-0">
                 <span className="text-xs bg-secondary/10 text-secondary px-2.5 py-1 rounded-md font-semibold border border-secondary/20">
-                  {vehicle.type === 'bus' ? 'Bus' : vehicle.type === 'van' ? 'Van' : 'Car'}
+                  {vehicle.type === 'bus' ? 'Bus' : vehicle.type === 'van' ? 'Van' : 'School Vehicle'}
                 </span>
               </div>
             </div>
@@ -128,3 +128,6 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
     </div>
   );
 }
+
+
+
