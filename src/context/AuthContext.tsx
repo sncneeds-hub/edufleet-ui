@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isFetchingSubscription = useRef(false);
 
-  const loadSubscriptionData = useCallback(async (userId: string, force = false) => {
+  const loadSubscriptionData = useCallback(async (userId: string, force = false, userRole?: string) => {
     // Guard against undefined/null userId
     if (!userId) {
       console.warn('[AuthContext] loadSubscriptionData called with no userId');
@@ -99,10 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       isFetchingSubscription.current = true;
       
+      // Determine planType based on user role
+      let planType: 'teacher' | 'institute' | 'vendor' | undefined;
+      if (userRole === 'teacher') {
+        planType = 'teacher';
+      } else if (userRole === 'institute') {
+        planType = 'institute';
+      } else if (userRole === 'vendor') {
+        planType = 'vendor';
+      }
+      
       // Fetch each piece of data independently to ensure one failure doesn't block others
       const [subscriptionResponse, plansResponse, statsResponse] = await Promise.allSettled([
         getUserSubscription(userId),
-        getActiveSubscriptionPlans(force), // Force refresh plans too
+        getActiveSubscriptionPlans(force, planType), // Pass planType to filter plans
         getSubscriptionUsageStats(userId)
       ]);
 
@@ -129,9 +139,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshSubscription = useCallback(async () => {
     if (user?.id) {
-      await loadSubscriptionData(user.id, true);
+      await loadSubscriptionData(user.id, true, user.role);
     }
-  }, [user?.id, loadSubscriptionData]);
+  }, [user?.id, user?.role, loadSubscriptionData]);
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -149,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // Update local storage with fresh data
               localStorage.setItem('user', JSON.stringify(freshUser));
               // Fetch subscription data immediately after restoring session
-              loadSubscriptionData(freshUser.id, true);
+              loadSubscriptionData(freshUser.id, true, freshUser.role);
             } else {
               throw new Error('No user data returned');
             }
@@ -183,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(response.user);
       // Fetch subscription data after login
-      loadSubscriptionData(response.user.id, true);
+      loadSubscriptionData(response.user.id, true, response.user.role);
       toast.success('Login successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
@@ -211,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(response.user);
       // Fetch subscription data after signup
-      loadSubscriptionData(response.user.id, true);
+      loadSubscriptionData(response.user.id, true, response.user.role);
       toast.success('Signup successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signup failed';
@@ -238,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       setUser(response.user);
       // Fetch subscription data after teacher signup
-      loadSubscriptionData(response.user.id, true);
+      loadSubscriptionData(response.user.id, true, response.user.role);
       toast.success('Teacher signup successful');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Signup failed';
@@ -309,9 +319,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const ensureSubscription = useCallback((force?: boolean) => {
     if (user?.id) {
-      return loadSubscriptionData(user.id, force);
+      return loadSubscriptionData(user.id, force, user.role);
     }
-  }, [user?.id, loadSubscriptionData]);
+  }, [user?.id, user?.role, loadSubscriptionData]);
 
   return (
     <AuthContext.Provider value={{ 

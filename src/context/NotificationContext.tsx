@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 import { Notification } from '@/types/subscriptionTypes';
 import {
   getRecentUnreadNotifications,
-  getUnreadCount as getUnreadCountApi,
+  getUnreadCountApi,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  deleteNotification,
+  deleteNotification as deleteNotificationApi,
   getNotifications,
 } from '@/api/services/notificationService';
 
@@ -15,6 +16,7 @@ interface NotificationContextType {
   loading: boolean;
   error: string | null;
   loadNotifications: () => Promise<void>;
+  loadAllNotifications: () => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
@@ -24,6 +26,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,29 +34,36 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Get current user ID from session/auth
   const getCurrentUserId = useCallback((): string => {
-    // This should ideally come from AuthContext or session
-    // For now, we'll use a stored value or default
-    try {
-      const stored = localStorage.getItem('auth_user');
-      if (stored) {
-        const user = JSON.parse(stored);
-        return user.id;
-      }
-    } catch (e) {
-      console.error('Error getting user ID:', e);
-    }
-    return 'guest';
-  }, []);
+    return user?.id || '';
+  }, [user?.id]);
 
   const loadNotifications = useCallback(async () => {
+    const userId = getCurrentUserId();
+    
+    // Don't fetch if no user is logged in
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
-      const userId = getCurrentUserId();
 
+      // Fetch recent unread notifications for the list
       const response = await getRecentUnreadNotifications(userId, 10);
       if (response.success && response.data) {
         setNotifications(response.data);
+      }
+
+      // Fetch accurate unread count
+      const countResponse = await getUnreadCountApi(userId);
+      if (countResponse.success && countResponse.data) {
+        setUnreadCount(countResponse.data.count);
+      } else if (response.success && response.data) {
+        // Fallback to list length if count API fails
         setUnreadCount(response.data.length);
       }
     } catch (err) {
@@ -65,7 +75,39 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [getCurrentUserId]);
 
+  const loadAllNotifications = useCallback(async () => {
+    const userId = getCurrentUserId();
+    
+    // Don't fetch if no user is logged in
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getNotifications(userId);
+      if (response.success && response.data) {
+        const allNotifications = response.data.items || response.data;
+        setNotifications(Array.isArray(allNotifications) ? allNotifications : []);
+        const unread = (Array.isArray(allNotifications) ? allNotifications : []).filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load all notifications';
+      setError(message);
+      console.error('Error loading all notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [getCurrentUserId]);
+
   const handleMarkAsRead = useCallback(async (notificationId: string) => {
+    if (!notificationId) return;
     try {
       setError(null);
       await markNotificationAsRead(notificationId);
@@ -104,24 +146,46 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [getCurrentUserId]);
 
   const handleDeleteNotification = useCallback(async (notificationId: string) => {
-    try {
-      setError(null);
-      await deleteNotification(notificationId);
-
-      // Update local state
-      const deletedNotif = notifications.find(n => n.id === notificationId);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-
+    if (!notificationId) {
+      console.warn('deleteNotification called with missing notificationId');
+      return;
+    }
+    
+    // Optimistically update UI first for better UX
+    setNotifications(prev => {
+      const deletedNotif = prev.find(n => n.id === notificationId);
+      
       // Update unread count if deleted notification was unread
       if (deletedNotif && !deletedNotif.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount(prevCount => Math.max(0, prevCount - 1));
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete notification';
+      
+      return prev.filter(n => n.id !== notificationId);
+    });
+    
+    try {
+      setError(null);
+      console.log(`[NotificationContext] Deleting notification ${notificationId}...`);
+      const result = await deleteNotificationApi(notificationId);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete notification');
+      }
+      console.log(`[NotificationContext] Successfully deleted notification ${notificationId}`);
+    } catch (err: any) {
+      // Revert optimistic update on error by reloading
+      const message = err.error || (err instanceof Error ? err.message : 'Failed to delete notification');
       setError(message);
       console.error('Error deleting notification:', err);
+      
+      // Reload notifications to restore state
+      try {
+        await loadNotifications();
+      } catch (reloadErr) {
+        console.error('Error reloading notifications:', reloadErr);
+      }
     }
-  }, [notifications]);
+  }, [loadNotifications]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -145,6 +209,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     loading,
     error,
     loadNotifications,
+    loadAllNotifications,
     markAsRead: handleMarkAsRead,
     markAllAsRead: handleMarkAllAsRead,
     deleteNotification: handleDeleteNotification,

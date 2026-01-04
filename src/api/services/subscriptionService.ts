@@ -37,21 +37,41 @@ export const getAllSubscriptionPlans = async (): Promise<ApiResponse<Subscriptio
   };
 };
 
-export const getActiveSubscriptionPlans = async (force = false): Promise<ApiResponse<SubscriptionPlan[]>> => {
+export const getActiveSubscriptionPlans = async (
+  force = false, 
+  planType?: 'teacher' | 'institute' | 'vendor'
+): Promise<ApiResponse<SubscriptionPlan[]>> => {
   const now = Date.now();
-  if (!force && plansCache && now - lastCacheTime < CACHE_DURATION) {
+  
+  // Cache key includes planType to avoid returning wrong plans
+  const cacheKey = `plans_${planType || 'all'}`;
+  
+  if (!force && plansCache && now - lastCacheTime < CACHE_DURATION && !planType) {
     console.log('[SubscriptionService] Returning cached active plans');
     return plansCache;
   }
 
-  const data = await apiClient.get<SubscriptionPlan[]>('/subscriptions/plans/active', { requiresAuth: false });
-  plansCache = {
+  // Build query params
+  const params = planType ? `?planType=${planType}` : '';
+  
+  const data = await apiClient.get<SubscriptionPlan[]>(
+    `/subscriptions/plans/active${params}`, 
+    { requiresAuth: false }
+  );
+  
+  const response = {
     success: true,
     data,
     timestamp: new Date().toISOString(),
   };
-  lastCacheTime = now;
-  return plansCache;
+  
+  // Only cache if no specific planType (general request)
+  if (!planType) {
+    plansCache = response;
+    lastCacheTime = now;
+  }
+  
+  return response;
 };
 
 export const getSubscriptionPlanById = async (planId: string): Promise<ApiResponse<SubscriptionPlan>> => {

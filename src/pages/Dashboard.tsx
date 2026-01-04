@@ -67,7 +67,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   useEffect(() => {
     if (user?.id) {
       refreshProfile();
-      ensureSubscription();
+      ensureSubscription(true);
       refetchListings();
       refetchJobs();
     }
@@ -117,6 +117,8 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   const handleJobCreateSuccess = async () => {
     setActiveTab('jobs');
     await refetchJobs();
+    // Then switch to listings tab to show the new listing
+    setActiveTab('listings');
   };
   
   const handleEditListing = (vehicle: Vehicle) => {
@@ -142,10 +144,10 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
     totalListings: userListings.length,
     activeListings: userListings.filter(v => v.status === 'approved').length,
     pendingApprovals: userListings.filter(v => v.status === 'pending').length,
-    totalViews: userListings.reduce((acc, _) => acc + Math.floor(Math.random() * 500), 0),
+    totalViews: userListings.reduce((acc, v) => acc + (v.views || 0), 0),
     totalJobs: userJobs.length,
-    activeJobs: userJobs.filter(j => j.status === 'approved').length,
-    totalApplicants: userJobs.reduce((acc, j) => acc + (j.applicants || 0), 0),
+    activeJobs: userJobs.filter(j => j.status === 'active').length,
+    totalApplicants: userJobs.reduce((acc, j) => acc + (j.applicationsCount || 0), 0),
   };
 
   const subscriptionData = subscription.data;
@@ -607,7 +609,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                                 {vehicle.status.charAt(0).toUpperCase() + vehicle.status.slice(1)}
                               </span>
                             </TableCell>
-                            <TableCell>245</TableCell>
+                            <TableCell>{vehicle.views}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button

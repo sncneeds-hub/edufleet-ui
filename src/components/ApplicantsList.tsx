@@ -128,6 +128,7 @@ export function ApplicantsList() {
     }
 
     try {
+        console.log('Scheduling interview with data:', selectedApplication);
       await api.jobs.updateApplicationStatus(selectedApplication.id || selectedApplication._id, {
         interviewScheduled: {
           scheduledDate: interviewData.date,

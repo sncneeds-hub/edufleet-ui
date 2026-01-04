@@ -103,7 +103,10 @@ export function JobListingForm({ onSuccess }: JobListingFormProps) {
     e.preventDefault();
 
     // Check limit before submission
-    if (jobLimitResult && !jobLimitResult.allowed) {
+    if (jobLimitResult && !jobLimitResult
+      
+      
+    ) {
       toast.error(jobLimitResult.message || 'Job post limit reached');
       return;
     }

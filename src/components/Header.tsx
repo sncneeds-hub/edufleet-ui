@@ -92,7 +92,7 @@ export function Header() {
             <nav className="flex items-center gap-7 text-sm font-medium">
               {!shouldShowTeacherNav && (
                 <>
-                  <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
+                  <Link to={user?.role === 'institute' ? "/browse" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Vehicles</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>

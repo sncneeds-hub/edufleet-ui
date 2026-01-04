@@ -85,7 +85,6 @@ export function ListingDetails() {
       </div>
     );
   }
-
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % vehicle.images.length);
   };

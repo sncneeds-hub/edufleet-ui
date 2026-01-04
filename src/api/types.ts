@@ -41,6 +41,7 @@ export interface Vehicle {
   sellerEmail: string;
   sellerPhone: string;
   isPriority: boolean;
+  views?: number;
   createdAt: string;
   status: 'pending' | 'approved' | 'rejected';
   insurance?: {

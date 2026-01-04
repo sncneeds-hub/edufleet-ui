@@ -144,7 +144,7 @@ export function useMyListings(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
+   const refetch = useCallback(async (options?: { silent?: boolean }) => {
     if (!userId) {
       // Don't set loading to false here, keep it true or handle it in component
       // But if we return, listings is empty.
@@ -154,7 +154,7 @@ export function useMyListings(userId: string | undefined) {
     }
 
     try {
-      setLoading(true);
+      if (!options?.silent) setLoading(true);
       setError(null);
       const response = await api.vehicles.getMyListings(userId);
       setListings(response.data);
@@ -162,7 +162,7 @@ export function useMyListings(userId: string | undefined) {
       setError(err.error || 'Failed to load your listings');
       console.error('Error fetching user listings:', err);
     } finally {
-      setLoading(false);
+      if (!options?.silent) setLoading(false);
     }
   }, [userId]);
 
@@ -188,6 +188,8 @@ export function useMyJobs() {
       setLoading(true);
       setError(null);
       const response = await api.jobs.getMyJobs();
+      console.log('Fetched user jobs:', response.data);
+      console.log("*******************************")
       setJobs(response.data);
     } catch (err: any) {
       setError(err.error || 'Failed to load your jobs');
@@ -603,8 +605,9 @@ export function useTeacherById(id: string | undefined) {
 
 /**
  * Hook to fetch active subscription plans
+ * @param planType - Optional filter by plan type (teacher, institute, vendor)
  */
-export function useSubscriptionPlans() {
+export function useSubscriptionPlans(planType?: 'teacher' | 'institute' | 'vendor') {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -614,7 +617,7 @@ export function useSubscriptionPlans() {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.subscriptions.getActiveSubscriptionPlans();
+        const response = await api.subscriptions.getActiveSubscriptionPlans(false, planType);
         setPlans(response.data);
       } catch (err: any) {
         setError(err.error || 'Failed to load subscription plans');
@@ -625,7 +628,7 @@ export function useSubscriptionPlans() {
     }
 
     fetchPlans();
-  }, []);
+  }, [planType]);
 
   return { plans, loading, error };
 }

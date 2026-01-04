@@ -12,7 +12,7 @@ import { Vehicle } from '@/api/types';
 
 interface ListingFormProps {
   listing?: Vehicle | null;
-  onSuccess?: () => void;
+  onSuccess?: () => Promise<void> | void;
   onCancel?: () => void;
 }
 
@@ -273,7 +273,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
       }
 
       if (onSuccess) {
-        onSuccess();
+        await onSuccess();
       } else {
         navigate('/dashboard'); // Redirect to dashboard
       }

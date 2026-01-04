@@ -20,6 +20,7 @@ import { TeacherSearch } from '@/pages/TeacherSearch';
 import { InstituteJobApplications } from '@/pages/InstituteJobApplications';
 import { SupplierBrowse } from '@/pages/SupplierBrowse';
 import { Advertise } from '@/pages/Advertise';
+import { NotificationsPage } from '@/pages/NotificationsPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/teacher/jobs" element={<TeacherJobBrowse />} />
                 <Route path="/teacher/job/:id" element={<TeacherJobDetails />} />
                 <Route path="/advertise" element={<Advertise />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
 
                 {/* Protected Routes - Institute Only */}

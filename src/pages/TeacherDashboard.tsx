@@ -65,7 +65,7 @@ export function TeacherDashboard() {
   useEffect(() => {
     if (user?.id) {
       refreshProfile();
-      ensureSubscription();
+      ensureSubscription(true);
       refetchApps();
     }
   }, [user?.id, refreshProfile, ensureSubscription, refetchApps]);

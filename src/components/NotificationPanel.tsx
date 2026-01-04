@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/context/NotificationContext';
+import { toast } from 'sonner';
 import {
   Check,
   Trash2,
@@ -12,6 +13,10 @@ import {
   Zap,
   Bell,
   Clock,
+  XCircle,
+  Star,
+  MessageSquare,
+  Shield,
 } from 'lucide-react';
 import { Notification } from '@/types/subscriptionTypes';
 import { useNavigate } from 'react-router-dom';
@@ -37,17 +42,27 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
+      case 'approval':
       case 'listing_approved':
-      case 'new_feature':
         return <Check className="w-4 h-4 text-green-600" />;
+      case 'rejection':
+      case 'listing_rejected':
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      case 'priority':
+        return <Star className="w-4 h-4 text-amber-500 fill-amber-500" />;
+      case 'message':
+        return <MessageSquare className="w-4 h-4 text-blue-500" />;
+      case 'system':
+      case 'system_alert':
+        return <Shield className="w-4 h-4 text-gray-700" />;
+      case 'new_feature':
+        return <Zap className="w-4 h-4 text-purple-600" />;
       case 'subscription_expiring':
       case 'subscription_expired':
         return <AlertCircle className="w-4 h-4 text-amber-600" />;
       case 'browse_limit_warning':
       case 'listing_limit_reached':
         return <Zap className="w-4 h-4 text-red-600" />;
-      case 'system_alert':
-        return <Bell className="w-4 h-4 text-blue-600" />;
       default:
         return <Info className="w-4 h-4 text-gray-600" />;
     }
@@ -88,7 +103,13 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
   const handleDelete = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation();
-    await deleteNotification(notificationId);
+    try {
+      await deleteNotification(notificationId);
+      toast.success('Notification deleted');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete notification';
+      toast.error(message);
+    }
   };
 
   if (loading) {

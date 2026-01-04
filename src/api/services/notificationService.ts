@@ -8,6 +8,43 @@ import {
 } from '../types';
 
 // ==========================================
+// HELPER: Transform MongoDB _id to id
+// ==========================================
+
+interface MongoNotification {
+  _id?: string;
+  id?: string;
+  userId: string;
+  type: Notification['type'];
+  title: string;
+  message: string;
+  isRead: boolean;
+  priority: Notification['priority'];
+  link?: string;
+  actionUrl?: string;
+  createdAt: string;
+  updatedAt?: string;
+  readAt?: string;
+}
+
+const transformNotification = (n: MongoNotification): Notification => ({
+  id: n._id || n.id || '',
+  userId: n.userId,
+  type: n.type,
+  title: n.title,
+  message: n.message,
+  isRead: n.isRead,
+  priority: n.priority || 'low',
+  actionUrl: n.actionUrl || n.link,
+  createdAt: n.createdAt,
+  readAt: n.readAt,
+});
+
+const transformNotifications = (notifications: MongoNotification[]): Notification[] => {
+  return notifications.map(transformNotification);
+};
+
+// ==========================================
 // NOTIFICATION CRUD OPERATIONS
 // ==========================================
 
@@ -26,11 +63,21 @@ export const getNotifications = async (
     const queryString = params.toString();
     const endpoint = queryString ? `/notifications?${queryString}` : '/notifications';
     
-    const data = await apiClient.get<PaginatedResponse<Notification>>(endpoint, { requiresAuth: true });
+    const rawData = await apiClient.get<any>(endpoint, { requiresAuth: true });
+    
+    // Handle the response format from backend
+    const items = Array.isArray(rawData) ? rawData : (rawData.items || rawData.data || []);
+    const transformedItems = transformNotifications(items);
 
     return {
       success: true,
-      data,
+      data: {
+        items: transformedItems,
+        total: rawData.pagination?.total || transformedItems.length,
+        page: rawData.pagination?.page || 1,
+        pageSize: rawData.pagination?.limit || 20,
+        hasMore: rawData.pagination?.pages > rawData.pagination?.page || false,
+      },
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
@@ -46,11 +93,15 @@ export const getUnreadNotifications = async (
   userId: string
 ): Promise<ApiResponse<Notification[]>> => {
   try {
-    const data = await apiClient.get<Notification[]>('/notifications?isRead=false', { requiresAuth: true });
+    const rawData = await apiClient.get<any>('/notifications?isRead=false', { requiresAuth: true });
+    
+    // Handle the response format from backend
+    const items = Array.isArray(rawData) ? rawData : (rawData.items || rawData.data || []);
+    const transformedItems = transformNotifications(items);
 
     return {
       success: true,
-      data,
+      data: transformedItems,
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
@@ -67,11 +118,15 @@ export const getRecentUnreadNotifications = async (
   limit: number = 5
 ): Promise<ApiResponse<Notification[]>> => {
   try {
-    const data = await apiClient.get<Notification[]>(`/notifications?isRead=false&limit=${limit}`, { requiresAuth: true });
+    const rawData = await apiClient.get<any>(`/notifications?isRead=false&limit=${limit}`, { requiresAuth: true });
+    
+    // Handle the response format from backend
+    const items = Array.isArray(rawData) ? rawData : (rawData.items || rawData.data || []);
+    const transformedItems = transformNotifications(items);
 
     return {
       success: true,
-      data,
+      data: transformedItems,
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
@@ -86,12 +141,20 @@ export const getRecentUnreadNotifications = async (
 export const getNotificationById = async (
   notificationId: string
 ): Promise<ApiResponse<Notification | null>> => {
+  if (!notificationId || notificationId === 'undefined') {
+    console.error('getNotificationById called with invalid ID:', notificationId);
+    throw {
+      success: false,
+      error: 'Invalid notification ID',
+      timestamp: new Date().toISOString(),
+    };
+  }
   try {
-    const notification = await apiClient.get<Notification>(`/notifications/${notificationId}`, { requiresAuth: true });
+    const notification = await apiClient.get<any>(`/notifications/${notificationId}`, { requiresAuth: true });
 
     return {
       success: true,
-      data: notification,
+      data: notification ? transformNotification(notification) : null,
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
@@ -107,11 +170,11 @@ export const createNotification = async (
   dto: CreateNotificationDto
 ): Promise<ApiResponse<Notification>> => {
   try {
-    const notification = await apiClient.post<Notification>('/notifications', dto);
+    const notification = await apiClient.post<any>('/notifications', dto);
 
     return {
       success: true,
-      data: notification,
+      data: transformNotification(notification),
       message: 'Notification created successfully',
       timestamp: new Date().toISOString(),
     };
@@ -131,12 +194,20 @@ export const createNotification = async (
 export const markNotificationAsRead = async (
   notificationId: string
 ): Promise<ApiResponse<Notification | null>> => {
+  if (!notificationId || notificationId === 'undefined') {
+    console.error('markNotificationAsRead called with invalid ID:', notificationId);
+    throw {
+      success: false,
+      error: 'Invalid notification ID',
+      timestamp: new Date().toISOString(),
+    };
+  }
   try {
-    const notification = await apiClient.put<Notification>(`/notifications/${notificationId}/read`, {});
+    const notification = await apiClient.put<any>(`/notifications/${notificationId}/read`, {});
 
     return {
       success: true,
-      data: notification,
+      data: notification ? transformNotification(notification) : null,
       message: 'Notification marked as read',
       timestamp: new Date().toISOString(),
     };
@@ -201,8 +272,17 @@ export const markAllNotificationsAsRead = async (
 export const deleteNotification = async (
   notificationId: string
 ): Promise<ApiResponse<{ success: boolean }>> => {
+  if (!notificationId || notificationId === 'undefined') {
+    console.error('deleteNotification called with invalid ID:', notificationId);
+    throw {
+      success: false,
+      error: 'Invalid notification ID',
+      timestamp: new Date().toISOString(),
+    };
+  }
   try {
-    await apiClient.delete(`/notifications/${notificationId}`);
+    console.log(`[NotificationService] Deleting notification with ID: ${notificationId}`);
+    await apiClient.delete(`/notifications/${notificationId}`, { requiresAuth: true });
 
     return {
       success: true,
@@ -211,6 +291,7 @@ export const deleteNotification = async (
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
+    console.error(`[NotificationService] Error deleting notification ${notificationId}:`, error);
     throw {
       success: false,
       error: error.message || 'Failed to delete notification',
