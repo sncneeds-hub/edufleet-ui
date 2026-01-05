@@ -9,13 +9,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+
+  // 🔥 Fix for Vercel build error:
+  optimizeDeps: {
+    include: ['@rolldown/pluginutils'],
+  },
+
   server: {
     port: 3000,
-    strictPort: true,
     host: true,
     allowedHosts: true,
-    hmr: {
-      overlay: false, // Disable Vite's built-in error overlay (we use our own ErrorOverlay)
-    },
-  }
+    hmr: { overlay: false },
+  },
+
+  build: {
+    outDir: 'dist',
+  },
+
+  base: '/',
 });
