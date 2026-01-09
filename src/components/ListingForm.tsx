@@ -32,7 +32,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
   const [formData, setFormData] = useState({
     title: listing?.title || '',
     manufacturer: listing?.manufacturer || '',
-    model: listing?.model || '',
+    vehiclemodel: listing?.vehiclemodel || '',
     year: listing?.year || new Date().getFullYear(),
     type: listing?.type || 'school-bus',
     price: listing?.price?.toString() || '',
@@ -207,7 +207,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
       const payload: any = {
         title: formData.title,
         manufacturer: formData.manufacturer,
-        model: formData.model,
+        vehiclemodel: formData.vehiclemodel,
         year: Number(formData.year),
         type: formData.type,
         price: Number(formData.price),
@@ -463,9 +463,9 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                 <label className="text-sm font-medium mb-2 block">Model</label>
                 <input
                   type="text"
-                  name="model"
+                  name="vehiclemodel"
                   placeholder="e.g., Vision"
-                  value={formData.model}
+                  value={formData.vehiclemodel}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   required
@@ -754,7 +754,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                   {formData.title && (
                     <div>
                       <h4 className="font-semibold line-clamp-2">{formData.title}</h4>
-                      <p className="text-sm text-muted-foreground">{formData.manufacturer} {formData.model} • {formData.year}</p>
+                      <p className="text-sm text-muted-foreground">{formData.manufacturer} {formData.vehiclemodel} • {formData.year}</p>
                     </div>
                   )}
                   {formData.price && (

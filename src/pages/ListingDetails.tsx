@@ -218,7 +218,7 @@ export function ListingDetails() {
             <Card className="p-6 mb-6">
               <h1 className="text-2xl font-bold mb-2">{vehicle.title}</h1>
               <p className="text-sm text-muted-foreground mb-4">
-                {vehicle.manufacturer} {vehicle.model}
+                {vehicle.manufacturer} {vehicle.vehiclemodel}
               </p>
 
               <div className="space-y-3 mb-6">

@@ -169,7 +169,7 @@ export function VehicleManagement() {
                     <TableCell>
                       <div>
                         <p className="font-medium line-clamp-1">{vehicle.title}</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.model}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.vehiclemodel}</p>
                       </div>
                     </TableCell>
                     <TableCell>

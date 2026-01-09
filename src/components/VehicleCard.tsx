@@ -58,7 +58,7 @@ export function VehicleCard({ vehicle, isListing = false }: VehicleCardProps) {
           <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
             <ShareButton
               title={vehicle.title}
-              text={`Check out this ${vehicle.manufacturer} ${vehicle.model} on EduFleet Exchange!`}
+              text={`Check out this ${vehicle.manufacturer} ${vehicle.vehiclemodel} on EduFleet Exchange!`}
               url={`/vehicle/${vehicle.id || (vehicle as any)._id}`}
               variant="secondary"
               size="icon"

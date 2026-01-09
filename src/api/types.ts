@@ -26,7 +26,7 @@ export interface Vehicle {
   id: string;
   title: string;
   manufacturer: string;
-  model: string;
+  vehiclemodel: string;
   year: number;
   type: 'school-bus' | 'minibus' | 'van' | 'truck';
   price: number;
@@ -84,7 +84,7 @@ export interface VehicleFilters {
 export interface CreateVehicleDto {
   title: string;
   manufacturer: string;
-  model: string;
+  vehiclemodel: string;
   year: number;
   type: 'school-bus' | 'minibus' | 'van' | 'truck';
   price: number;
