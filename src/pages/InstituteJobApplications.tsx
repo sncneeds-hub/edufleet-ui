@@ -44,6 +44,7 @@ export function InstituteJobApplications() {
   const { user } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const [job, setJob] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,8 +95,33 @@ export function InstituteJobApplications() {
     }
   };
 
-  const handleScheduleInterview = (application: any) => {
+  const handleScheduleInterview = (application: any, reschedule = false) => {
     setSelectedApplication(application);
+    setIsRescheduling(reschedule);
+    
+    // Pre-fill if rescheduling
+    if (reschedule && application.interviewScheduled) {
+      setInterviewData({
+        date: application.interviewScheduled.scheduledDate,
+        time: application.interviewScheduled.scheduledTime,
+        duration: application.interviewScheduled.duration,
+        mode: application.interviewScheduled.mode,
+        location: application.interviewScheduled.location || '',
+        meetingLink: application.interviewScheduled.meetingLink || '',
+        notes: application.interviewScheduled.notes || '',
+      });
+    } else {
+      setInterviewData({
+        date: '',
+        time: '',
+        duration: '60',
+        mode: 'video',
+        location: '',
+        meetingLink: '',
+        notes: '',
+      });
+    }
+    
     setShowScheduleDialog(true);
   };
 
@@ -115,21 +141,35 @@ export function InstituteJobApplications() {
       return;
     }
 
-    try {
-      await api.jobs.updateApplicationStatus(selectedApplication.id, {
-        interviewScheduled: {
-          scheduledDate: interviewData.date,
-          scheduledTime: interviewData.time,
-          duration: interviewData.duration,
-          mode: interviewData.mode,
-          location: interviewData.location,
-          meetingLink: interviewData.meetingLink,
-          notes: interviewData.notes,
-        }
-      });
+    const appId = selectedApplication?._id || selectedApplication?.id;
+    if (!appId) {
+      toast.error('Invalid application ID');
+      return;
+    }
 
-      toast.success('Interview scheduled successfully!');
+    try {
+      const interviewDetails = {
+        scheduledDate: interviewData.date,
+        scheduledTime: interviewData.time,
+        duration: interviewData.duration,
+        mode: interviewData.mode,
+        location: interviewData.location,
+        meetingLink: interviewData.meetingLink,
+        notes: interviewData.notes,
+      };
+
+      if (isRescheduling) {
+        await api.jobs.rescheduleInterview(appId, interviewDetails);
+        toast.success('Interview rescheduled successfully!');
+      } else {
+        await api.jobs.updateApplicationStatus(appId, {
+          interviewScheduled: interviewDetails
+        });
+        toast.success('Interview scheduled successfully!');
+      }
+
       setShowScheduleDialog(false);
+      setIsRescheduling(false);
       setInterviewData({
         date: '',
         time: '',
@@ -140,9 +180,9 @@ export function InstituteJobApplications() {
         notes: '',
       });
       loadData(); // Reload data
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to schedule interview:', error);
-      toast.error('Failed to schedule interview');
+      toast.error(error?.response?.data?.error || 'Failed to schedule interview');
     }
   };
 
@@ -249,9 +289,9 @@ export function InstituteJobApplications() {
         <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Schedule Interview</DialogTitle>
+              <DialogTitle>{isRescheduling ? 'Reschedule Interview' : 'Schedule Interview'}</DialogTitle>
               <DialogDescription>
-                Schedule an interview with {selectedApplication?.teacherName}
+                {isRescheduling ? 'Update interview details for' : 'Schedule an interview with'} {selectedApplication?.teacherName}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -350,7 +390,7 @@ export function InstituteJobApplications() {
                   className="flex-1"
                   onClick={submitScheduleInterview}
                 >
-                  Schedule Interview
+                  {isRescheduling ? 'Reschedule Interview' : 'Schedule Interview'}
                 </Button>
               </div>
             </div>
