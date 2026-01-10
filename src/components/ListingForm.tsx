@@ -26,13 +26,10 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
   // Remove the useEffect that redirects if user.id is missing
   // ProtectedRoute handles the main auth check, and we'll handle the id check gracefully
 
-  // If no user, don't render anything (Dashboard handles the loading state)
-  if (!user) return null;
-
   const [formData, setFormData] = useState({
     title: listing?.title || '',
     manufacturer: listing?.manufacturer || '',
-    vehiclemodel: listing?.vehiclemodel || '',
+    vehicleModel: listing?.vehicleModel || '',
     year: listing?.year || new Date().getFullYear(),
     type: listing?.type || 'school-bus',
     price: listing?.price?.toString() || '',
@@ -88,6 +85,9 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
 
     checkLimit();
   }, [user?.id, (user as any)?._id, listing]);
+
+  // If no user, don't render anything (Dashboard handles the loading state)
+  if (!user) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -197,24 +197,60 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
       return;
     }
 
+    // Validate required fields (trim whitespace)
+    const trimmedTitle = formData.title.trim();
+    const trimmedManufacturer = formData.manufacturer.trim();
+    const trimmedVehicleModel = formData.vehicleModel.trim();
+    const trimmedDescription = formData.description.trim();
+    const trimmedRegNumber = formData.registrationNumber.trim();
+
+    if (!trimmedTitle) {
+      toast.error('Title is required');
+      return;
+    }
+    if (!trimmedManufacturer) {
+      toast.error('Manufacturer is required');
+      return;
+    }
+    if (!trimmedVehicleModel) {
+      toast.error('Model is required');
+      return;
+    }
+    if (!trimmedDescription) {
+      toast.error('Description is required');
+      return;
+    }
+    if (!trimmedRegNumber) {
+      toast.error('Registration Number is required');
+      return;
+    }
+    if (!formData.price || Number(formData.price) <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+    if (!formData.mileage || Number(formData.mileage) < 0) {
+      toast.error('Please enter a valid mileage');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       // Prepare image URLs for submission
       const imageUrls = uploadedImages.map(img => img.url);
 
-      // Construct payload matching backend model
+      // Construct payload matching backend model (use trimmed values)
       const payload: any = {
-        title: formData.title,
-        manufacturer: formData.manufacturer,
-        vehiclemodel: formData.vehiclemodel,
+        title: trimmedTitle,
+        manufacturer: trimmedManufacturer,
+        vehicleModel: trimmedVehicleModel,
         year: Number(formData.year),
         type: formData.type,
         price: Number(formData.price),
-        registrationNumber: formData.registrationNumber,
+        registrationNumber: trimmedRegNumber,
         mileage: Number(formData.mileage),
         condition: formData.condition,
-        description: formData.description,
+        description: trimmedDescription,
         images: imageUrls,
         features: listing?.features || [], 
       };
@@ -274,6 +310,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
 
       if (onSuccess) {
         await onSuccess();
+        // Don't navigate - let parent component handle tab switching after refetch
       } else {
         navigate('/dashboard'); // Redirect to dashboard
       }
@@ -419,7 +456,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Title</label>
+                <label className="text-sm font-medium mb-2 block">Title <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   name="title"
@@ -431,7 +468,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Type</label>
+                <label className="text-sm font-medium mb-2 block">Type <span className="text-red-500">*</span></label>
                 <select
                   name="type"
                   value={formData.type}
@@ -448,7 +485,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Manufacturer</label>
+                <label className="text-sm font-medium mb-2 block">Manufacturer <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   name="manufacturer"
@@ -460,19 +497,19 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Model</label>
+                <label className="text-sm font-medium mb-2 block">Model <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  name="vehiclemodel"
+                  name="vehicleModel"
                   placeholder="e.g., Vision"
-                  value={formData.vehiclemodel}
+                  value={formData.vehicleModel}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Year</label>
+                <label className="text-sm font-medium mb-2 block">Year <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   name="year"
@@ -486,7 +523,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Price (₹)</label>
+                <label className="text-sm font-medium mb-2 block">Price (₹) <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   name="price"
@@ -498,7 +535,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Mileage (km)</label>
+                <label className="text-sm font-medium mb-2 block">Mileage (km) <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   name="mileage"
@@ -526,7 +563,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Registration Number</label>
+              <label className="text-sm font-medium mb-2 block">Registration Number <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 name="registrationNumber"
@@ -667,7 +704,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Description</label>
+              <label className="text-sm font-medium mb-2 block">Description <span className="text-red-500">*</span></label>
               <textarea
                 name="description"
                 placeholder="Describe the vehicle in detail..."
@@ -675,6 +712,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                 onChange={handleChange}
                 rows={4}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                required
               />
             </div>
 
@@ -754,7 +792,7 @@ export function ListingForm({ listing, onSuccess, onCancel }: ListingFormProps) 
                   {formData.title && (
                     <div>
                       <h4 className="font-semibold line-clamp-2">{formData.title}</h4>
-                      <p className="text-sm text-muted-foreground">{formData.manufacturer} {formData.vehiclemodel} • {formData.year}</p>
+                      <p className="text-sm text-muted-foreground">{formData.manufacturer} {formData.vehicleModel} • {formData.year}</p>
                     </div>
                   )}
                   {formData.price && (
