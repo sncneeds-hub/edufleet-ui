@@ -159,8 +159,8 @@ export function JobDetails() {
       setTimeout(() => {
         navigate('/teacher/dashboard');
       }, 1500);
-    } catch (error) {
-      toast.error('Failed to submit application');
+    } catch (error: any) {
+      toast.error(error.error || 'Failed to submit application');
       console.error(error);
     } finally {
       setSubmitting(false);
