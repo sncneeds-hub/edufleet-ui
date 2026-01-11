@@ -10,7 +10,7 @@ export function AdminOverview() {
   const navigate = useNavigate();
   const { ads } = useAds();
   const [supplierStats, setSupplierStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
-  const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priorityListings: 0 });
+  const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priority: 0 });
   const [subscriptionStats, setSubscriptionStats] = useState<any>(null);
 
   useEffect(() => {
