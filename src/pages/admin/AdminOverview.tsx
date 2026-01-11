@@ -25,7 +25,7 @@ export function AdminOverview() {
         api.subscriptions.getGlobalSubscriptionStats()
       ]);
       setSupplierStats(supplierResponse.data);
-      setVehicleStats(vehicleResponse.data);
+      setVehicleStats(vehicleResponse.data.vehicles);
       if (subscriptionResponse.success) {
         setSubscriptionStats(subscriptionResponse.data);
       }
