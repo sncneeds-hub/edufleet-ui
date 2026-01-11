@@ -33,7 +33,7 @@ export const vehicleService = {
       const queryString = params.toString();
       const endpoint = queryString ? `/vehicles?${queryString}` : '/vehicles';
       
-      const data = await apiClient.get<PaginatedResponse<Vehicle>>(endpoint, { requiresAuth: false });
+      const data = await apiClient.get<PaginatedResponse<Vehicle>>(endpoint);
       
       return {
         success: true,
@@ -54,7 +54,7 @@ export const vehicleService = {
    */
   async getVehicleById(id: string): Promise<ApiResponse<Vehicle>> {
     try {
-      const vehicle = await apiClient.get<Vehicle>(`/vehicles/${id}`, { requiresAuth: false });
+      const vehicle = await apiClient.get<Vehicle>(`/vehicles/${id}`);
 
       return {
         success: true,
@@ -75,7 +75,7 @@ export const vehicleService = {
    */
   async getPriorityListings(): Promise<ApiResponse<Vehicle[]>> {
     try {
-      const vehicles = await apiClient.get<Vehicle[]>('/vehicles/priority', { requiresAuth: false });
+      const vehicles = await apiClient.get<Vehicle[]>('/vehicles/priority');
 
       return {
         success: true,
@@ -96,7 +96,7 @@ export const vehicleService = {
    */
   async getRecentListings(limit = 3): Promise<ApiResponse<Vehicle[]>> {
     try {
-      const vehicles = await apiClient.get<Vehicle[]>(`/vehicles/recent?limit=${limit}`, { requiresAuth: false });
+      const vehicles = await apiClient.get<Vehicle[]>(`/vehicles/recent?limit=${limit}`);
 
       return {
         success: true,

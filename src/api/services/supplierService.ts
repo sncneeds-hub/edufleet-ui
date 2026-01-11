@@ -33,7 +33,7 @@ export async function getSuppliers(
     const queryString = params.toString();
     const endpoint = queryString ? `/suppliers?${queryString}` : '/suppliers';
     
-    const data = await apiClient.get<PaginatedResponse<Supplier>>(endpoint, { requiresAuth: false });
+    const data = await apiClient.get<PaginatedResponse<Supplier>>(endpoint);
     
     return {
       success: true,
@@ -54,7 +54,7 @@ export async function getSuppliers(
  */
 export async function getSupplierById(id: string): Promise<ApiResponse<Supplier>> {
   try {
-    const supplier = await apiClient.get<Supplier>(`/suppliers/${id}`, { requiresAuth: false });
+    const supplier = await apiClient.get<Supplier>(`/suppliers/${id}`);
 
     return {
       success: true,
