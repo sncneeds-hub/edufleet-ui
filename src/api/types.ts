@@ -148,6 +148,7 @@ export interface User {
   subjects?: string[];
   bio?: string;
   isAvailable?: boolean;
+  instituteSearchability?: boolean;
 }
 
 export interface AuthResponse {

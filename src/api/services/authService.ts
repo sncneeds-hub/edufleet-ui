@@ -20,6 +20,7 @@ export interface User {
   bio?: string;
   location?: string;
   isAvailable?: boolean;
+  instituteSearchability?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
