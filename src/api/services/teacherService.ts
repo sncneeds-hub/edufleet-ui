@@ -9,7 +9,8 @@ import type { ApiResponse, PaginatedResponse } from '../types';
 
 // Teacher types
 export interface Teacher {
-  id: string;
+  id?: string;
+  _id?: string;
   name: string;
   email: string;
   phone: string;
@@ -21,6 +22,7 @@ export interface Teacher {
   resume?: string;
   avatar: string;
   isAvailable: boolean;
+  instituteSearchability?: boolean;
   expectedSalary?: {
     min: number;
     max: number;

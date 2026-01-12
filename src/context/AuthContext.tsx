@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signupTeacher = async (data: TeacherSignupData) => {
+ const signupTeacher = async (data: TeacherSignupData & { instituteSearchability?: boolean }) => {
     try {
       setIsLoading(true);
       const response = await authService.signupTeacher({

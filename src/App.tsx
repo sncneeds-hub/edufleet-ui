@@ -16,6 +16,7 @@ import { TeacherSignup } from '@/pages/TeacherSignup';
 import { TeacherDashboard } from '@/pages/TeacherDashboard';
 import { TeacherJobBrowse } from '@/pages/TeacherJobBrowse';
 import { TeacherJobDetails } from '@/pages/TeacherJobDetails';
+import { InstituteTeacherSearch } from '@/pages/InstituteTeacherSearch';
 import { TeacherSearch } from '@/pages/TeacherSearch';
 import { InstituteJobApplications } from '@/pages/InstituteJobApplications';
 import { SupplierBrowse } from '@/pages/SupplierBrowse';
@@ -104,7 +105,7 @@ function App() {
                   path="/institute/teachers" 
                   element={
                     <ProtectedRoute requiredRole="institute">
-                      <TeacherSearch />
+                      <InstituteTeacherSearch />
                     </ProtectedRoute>
                   } 
                 />

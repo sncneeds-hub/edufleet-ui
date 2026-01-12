@@ -92,7 +92,7 @@ export function Header() {
             <nav className="flex items-center gap-7 text-sm font-medium">
               {!shouldShowTeacherNav && (
                 <>
-                  <Link to={user?.role === 'institute' ? "/browse" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
+                  <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Vehicles</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>
@@ -104,6 +104,12 @@ export function Header() {
                     <span>Suppliers</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>
+                  {user?.role === 'institute' && (
+                    <Link to="/institute/teachers" className="text-foreground/70 hover:text-primary transition-all relative group">
+                      <span>Find Teacher</span>
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                    </Link>
+                  )}
                   <Link to="/#pricing" className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Pricing</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
@@ -209,6 +215,11 @@ export function Header() {
                   <Link to="/suppliers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Suppliers</span>
                   </Link>
+                  {user?.role === 'institute' && (
+                    <Link to="/institute/teachers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      <span className="font-medium">Find Teacher</span>
+                    </Link>
+                  )}
                   <Link to="/#pricing" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Pricing</span>
                   </Link>
