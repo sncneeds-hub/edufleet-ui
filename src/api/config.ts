@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
   
   // Pagination defaults
   DEFAULT_PAGE_SIZE: 12,
@@ -61,5 +61,16 @@ export const API_CONFIG = {
     SUBSCRIPTION_EXTEND: (id: string) => `/subscriptions/${id}/extend`,
     SUBSCRIPTION_STATS: '/subscriptions/stats',
     SUBSCRIPTION_USAGE: (userId: string) => `/subscriptions/user/${userId}/usage`,
+    
+    // Ads
+    ADS: '/ads',
+    AD_BY_ID: (id: string) => `/ads/${id}`,
+    ADS_BY_PLACEMENT: (placement: string) => `/ads/placement/${placement}`,
+    AD_IMPRESSION: (id: string) => `/ads/${id}/impression`,
+    AD_CLICK: (id: string) => `/ads/${id}/click`,
+    AD_ANALYTICS: '/ads/analytics',
+    AD_REQUESTS: '/ads/requests',
+    AD_REQUESTS_ALL: '/ads/requests/all',
+    AD_REQUEST_STATUS: (id: string) => `/ads/requests/${id}/status`,
   },
 };

@@ -42,6 +42,7 @@ export function Header() {
   // Determine which menu items to show based on user role
   const shouldShowTeacherNav = user?.role === 'teacher';
   const shouldShowInstituteNav = user?.role === 'institute' || (!user?.role && user);
+  const showPromoLinks = !(user?.role === 'institute' || user?.role === 'teacher');
 
   const handleHeaderSearch = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -123,13 +124,17 @@ export function Header() {
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                 </Link>
               )}
-              <Link to="/advertise" className="flex items-center gap-1.5 text-foreground/70 hover:text-secondary transition-all">
-                <Megaphone className="w-4 h-4" />
-                <span>Advertise</span>
-              </Link>
-              <Link to="/signup" className="flex items-center gap-1.5 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground transition-all font-semibold px-4 py-2 border border-accent/30 hover:border-accent rounded-lg shadow-sm hover:shadow-md">
-                <span className="uppercase text-xs tracking-wide">Free Listing</span>
-              </Link>
+              {showPromoLinks && (
+                <>
+                  <Link to="/advertise" className="flex items-center gap-1.5 text-foreground/70 hover:text-secondary transition-all">
+                    <Megaphone className="w-4 h-4" />
+                    <span>Advertise</span>
+                  </Link>
+                  <Link to="/signup" className="flex items-center gap-1.5 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground transition-all font-semibold px-4 py-2 border border-accent/30 hover:border-accent rounded-lg shadow-sm hover:shadow-md">
+                    <span className="uppercase text-xs tracking-wide">Free Listing</span>
+                  </Link>
+                </>
+              )}
             </nav>
 
             <div className="flex items-center gap-4">
@@ -229,9 +234,11 @@ export function Header() {
                   <span className="font-medium">Browse Jobs</span>
                 </Link>
               )}
-              <Link to="/advertise" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                <span className="font-medium">Advertise</span>
-              </Link>
+              {showPromoLinks && (
+                <Link to="/advertise" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <span className="font-medium">Advertise</span>
+                </Link>
+              )}
             </div>
             
             <div className="border-t border-border pt-4">
