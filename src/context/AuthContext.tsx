@@ -245,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subjects: data.subjects,
         bio: data.bio,
         location: data.location,
+        instituteSearchability: data.instituteSearchability || false,
       });
       setUser(response.user);
       // Fetch subscription data after teacher signup

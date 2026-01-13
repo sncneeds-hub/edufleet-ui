@@ -73,6 +73,10 @@ export const apiClient = {
    */
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
 
+     if (!endpoint) {
+      throw new APIError(0, 'Endpoint is required', 'INVALID_ENDPOINT');
+    }
+
     const { requiresAuth = true, headers = {}, ...fetchOptions } = options;
 
     const url = `${API_CONFIG.BASE_URL}${endpoint}`;
