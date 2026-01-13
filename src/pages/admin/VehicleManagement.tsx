@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Vehicle } from '@/api/types';
-import { CheckCircle2, XCircle, Star, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Star, Loader2, Megaphone } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Table,
@@ -17,6 +17,7 @@ import { useVehicles, useAdminActions } from '@/hooks/useApi';
 
 export function VehicleManagement() {
   const { type } = useParams<{ type: 'pending' | 'all' }>();
+  const navigate = useNavigate();
   const isPendingView = type === 'pending';
   
   // Fetch vehicles from API
@@ -86,6 +87,28 @@ export function VehicleManagement() {
     } catch (error) {
       toast.error('Failed to approve all listings');
     }
+  };
+
+  const handlePromoteToAd = (vehicle: Vehicle) => {
+    navigate('/admin/ads/create', {
+      state: {
+        adData: {
+          title: vehicle.title,
+          advertiser: vehicle.sellerName,
+          type: 'image',
+          mediaUrl: vehicle.images?.[0] || '',
+          targetUrl: `/vehicle/${vehicle.id || (vehicle as any)._id}`,
+          placement: 'LIST_SIDEBAR', // Default placement
+          priority: 5,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 days
+          status: 'draft',
+          budget: 1000,
+          pricingModel: 'cpm',
+          currency: 'INR'
+        }
+      }
+    });
   };
 
   return (
@@ -169,7 +192,7 @@ export function VehicleManagement() {
                     <TableCell>
                       <div>
                         <p className="font-medium line-clamp-1">{vehicle.title}</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.vehiclemodel}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.manufacturer} {vehicle.vehicleModel}</p>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -230,6 +253,15 @@ export function VehicleManagement() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePromoteToAd(vehicle)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Promote to Ad"
+                        >
+                          <Megaphone className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
