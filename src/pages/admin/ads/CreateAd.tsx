@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAds } from '../../../context/AdContext';
 import { AdForm } from '../../../components/ads/AdForm';
 import { useToast } from '../../../hooks/use-toast';
@@ -7,6 +7,7 @@ import { useToast } from '../../../hooks/use-toast';
 const CreateAd: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { ads, addAd, updateAd } = useAds();
   const { toast } = useToast();
   const [initialData, setInitialData] = useState<any>(undefined);
@@ -21,8 +22,11 @@ const CreateAd: React.FC = () => {
         toast({ title: 'Error', description: 'Ad not found', variant: 'destructive' });
         navigate('/admin/ads');
       }
+    } else if (location.state?.adData) {
+      // Handle pre-filled data from other pages (e.g. promoting a vehicle)
+      setInitialData(location.state.adData);
     }
-  }, [id, ads, navigate, toast]);
+  }, [id, ads, navigate, toast, location.state]);
 
   const handleSubmit = async (data: any) => {
     setLoading(true);

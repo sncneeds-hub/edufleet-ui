@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Ad, AdPlacement, AdType, AdStatus, AdPricingModel } from '../../types/adTypes';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -32,6 +32,20 @@ export const AdForm: React.FC<AdFormProps> = ({ initialData, onSubmit, isSubmitt
     currency: initialData?.currency || 'USD',
     targetLocation: initialData?.targetLocation || '',
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData,
+        // Ensure specific fields are correctly mapped if they exist in initialData
+        type: initialData.type || prev.type,
+        placement: initialData.placement || prev.placement,
+        status: initialData.status || prev.status,
+        pricingModel: initialData.pricingModel || prev.pricingModel,
+      }));
+    }
+  }, [initialData]);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));

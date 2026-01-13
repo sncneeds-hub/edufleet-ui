@@ -1,12 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Building2,
+import { 
+  LayoutDashboard, 
+  Car, 
+  Building2, 
   Megaphone,
   Settings,
   Clock,
   CheckCircle,
-  CreditCard
+  CreditCard,
+  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -16,22 +18,10 @@ interface AdminSidebarProps {
   pendingSuppliers: number;
 }
 
-interface NavItem {
-  title: string;
-  path?: string;
-  exact?: boolean;
-  icon?: React.ElementType;
-  badge?: number;
-  children?: NavItem[];
-}
-
-export function AdminSidebar({
-  pendingVehicles,
-  pendingSuppliers
-}: AdminSidebarProps) {
+export function AdminSidebar({ pendingVehicles, pendingSuppliers }: AdminSidebarProps) {
   const location = useLocation();
 
-  const navItems: NavItem[] = [
+  const navItems = [
     {
       title: 'Overview',
       path: '/admin',
@@ -40,7 +30,7 @@ export function AdminSidebar({
     },
     {
       title: 'Vehicles',
-      icon: Building2,
+      icon: Car,
       children: [
         {
           title: 'Pending Approval',
@@ -54,6 +44,11 @@ export function AdminSidebar({
           icon: CheckCircle
         }
       ]
+    },
+    {
+      title: 'Jobs',
+      icon: Briefcase,
+      path: '/admin/jobs'
     },
     {
       title: 'Suppliers',
@@ -90,7 +85,9 @@ export function AdminSidebar({
   ];
 
   const isActive = (path: string, exact?: boolean) => {
-    if (exact) return location.pathname === path;
+    if (exact) {
+      return location.pathname === path;
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -109,32 +106,27 @@ export function AdminSidebar({
               {item.children ? (
                 <div>
                   <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground">
-                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <item.icon className="w-4 h-4" />
                     <span>{item.title}</span>
                   </div>
-
                   <div className="ml-4 space-y-1">
                     {item.children.map((child) => (
                       <Link
                         key={child.path}
-                        to={child.path!}
+                        to={child.path}
                         className={cn(
                           "flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
-                          isActive(child.path!)
+                          isActive(child.path)
                             ? "bg-primary text-primary-foreground font-medium"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )}
                       >
                         <div className="flex items-center gap-2">
-                          {child.icon && <child.icon className="w-4 h-4" />}
+                          <child.icon className="w-4 h-4" />
                           <span>{child.title}</span>
                         </div>
-
                         {child.badge !== undefined && child.badge > 0 && (
-                          <Badge
-                            variant={isActive(child.path!) ? "secondary" : "default"}
-                            className="h-5 min-w-5 px-1.5"
-                          >
+                          <Badge variant={isActive(child.path) ? "secondary" : "default"} className="h-5 min-w-5 px-1.5">
                             {child.badge}
                           </Badge>
                         )}
@@ -152,7 +144,7 @@ export function AdminSidebar({
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  {item.icon && <item.icon className="w-4 h-4" />}
+                  <item.icon className="w-4 h-4" />
                   <span>{item.title}</span>
                 </Link>
               )}

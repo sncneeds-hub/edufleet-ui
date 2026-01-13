@@ -30,6 +30,7 @@ import { AdminLogin } from '@/pages/AdminLogin';
 import { AdminLayout } from '@/pages/admin/AdminLayout';
 import { AdminOverview } from '@/pages/admin/AdminOverview';
 import { VehicleManagement } from '@/pages/admin/VehicleManagement';
+import { JobManagement } from '@/pages/admin/JobManagement';
 import { SupplierManagement } from '@/pages/admin/SupplierManagement';
 import { SubscriptionManagement } from '@/pages/admin/SubscriptionManagement';
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
@@ -122,6 +123,7 @@ function App() {
                 <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
                   <Route index element={<AdminOverview />} />
                   <Route path="vehicles/:type" element={<VehicleManagement />} />
+                   <Route path="jobs" element={<JobManagement />} />
                   <Route path="suppliers/:type" element={<SupplierManagement />} />
                   <Route path="subscriptions" element={<SubscriptionManagement />} />
                   <Route path="settings" element={<AdminSettingsPage />} />

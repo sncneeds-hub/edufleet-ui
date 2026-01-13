@@ -131,7 +131,7 @@ export const AdProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       const placementAds = await adService.getAdsByPlacement(placement);
       return placementAds;
     } catch (error: any) {
-      console.error('Failed to fetch ads by placement:', error);
+      console.error(`[AdContext] Failed to fetch ads for ${placement}:`, error);
       return [];
     }
   }, []);
