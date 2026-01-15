@@ -422,3 +422,52 @@ export const changeUserSubscriptionPlan = async (
     timestamp: new Date().toISOString(),
   };
 };
+
+// ==========================================
+// PERSONA-BASED ACCESS CONTROL
+// ==========================================
+
+export const getPersonaAccessControl = async (): Promise<any> => {
+  const data = await apiClient.get('/access/me');
+  return {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+export const checkVehicleListingAccess = async (): Promise<any> => {
+  const data = await apiClient.get('/access/vehicle-listing');
+  return {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+export const checkJobPostAccess = async (): Promise<any> => {
+  const data = await apiClient.get('/access/job-post');
+  return {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+export const checkJobApplicationAccess = async (): Promise<any> => {
+  const data = await apiClient.get('/access/job-application');
+  return {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+export const checkProductListingAccess = async (): Promise<any> => {
+  const data = await apiClient.get('/access/product-listing');
+  return {
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  };
+};

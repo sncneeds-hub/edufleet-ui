@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { SubscriptionRequest } from '@/types/subscriptionTypes';
+import { PersonaAccessInfo } from '@/components/PersonaAccessInfo';
 
 interface SubscriptionStatusProps {
   subscriptionData?: any;
@@ -408,6 +409,11 @@ export function SubscriptionStatus({
             </Button>
           </div>
         </Card>
+      )}
+
+      {/* Persona-Based Access Info */}
+      {subscription && (
+        <PersonaAccessInfo showDetails={true} />
       )}
 
       {/* Pending Requests */}
