@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VehicleCard } from '@/components/VehicleCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,16 @@ import { SubscriptionAlert } from '@/components/SubscriptionAlert';
 const ALL_FILTER = '__all__';
 
 export function Browse() {
-  const { user } = useAuth();
+  const { user, subscription } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect vendors away from vehicle browse
+  useEffect(() => {
+    if (user?.role === 'vendor') {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   const [activeTab, setActiveTab] = useState('vehicles');
   
   // Vehicle filters
@@ -79,9 +89,11 @@ export function Browse() {
     setConditionFilter(ALL_FILTER);
   };
 
-  // Note: User subscription check removed as it's not yet properly integrated
-  // This will be added when subscription service is fully connected
-  const hasDelay = !user;
+  // Subscription check
+  const activePlanId = subscription?.data?.subscriptionPlanId || user?.subscription?.planId;
+  const activePlan = subscription?.plans?.find(p => p.id === activePlanId);
+  const isFreePlan = !user || activePlan?.price === 0;
+  const hasDelay = isFreePlan;
 
   return (
     <div className="min-h-screen bg-background">

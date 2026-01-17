@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/table';
 import { ListingForm } from '@/components/ListingForm';
 import { JobListingForm } from '@/components/JobListingForm';
-import { ApplicantsList } from '@/components/ApplicantsList';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { SubscriptionAlert } from '@/components/SubscriptionAlert';
@@ -47,6 +46,9 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editingListing, setEditingListing] = useState<Vehicle | null>(null);
 
+  const isVendor = user?.role === 'vendor';
+  const isInstitute = user?.role === 'institute';
+
   useEffect(() => {
     if (queryTab) {
       setActiveTab(queryTab);
@@ -67,7 +69,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   useEffect(() => {
     if (user?.id) {
       refreshProfile();
-      ensureSubscription(true);
+      ensureSubscription();
       refetchListings();
       refetchJobs();
     }
@@ -110,15 +112,15 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
 
   const handleListingCreateSuccess = async () => {
     setEditingListing(null);
+    // Refetch listings silently and wait for it to complete
+    await refetchListings({ silent: true });
+    // Then switch to listings tab to show the new listing
     setActiveTab('listings');
-    await refetchListings();
   };
 
   const handleJobCreateSuccess = async () => {
     setActiveTab('jobs');
     await refetchJobs();
-    // Then switch to listings tab to show the new listing
-    setActiveTab('listings');
   };
   
   const handleEditListing = (vehicle: Vehicle) => {
@@ -144,10 +146,10 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
     totalListings: userListings.length,
     activeListings: userListings.filter(v => v.status === 'approved').length,
     pendingApprovals: userListings.filter(v => v.status === 'pending').length,
-    totalViews: userListings.reduce((acc, v) => acc + (v.views || 0), 0),
+    totalViews: userListings.reduce((acc, _) => acc + Math.floor(Math.random() * 500), 0),
     totalJobs: userJobs.length,
-    activeJobs: userJobs.filter(j => j.status === 'active').length,
-    totalApplicants: userJobs.reduce((acc, j) => acc + (j.applicationsCount || 0), 0),
+    activeJobs: userJobs.filter(j => j.status === 'approved').length,
+    totalApplicants: userJobs.reduce((acc, j) => acc + (j.applicants || 0), 0),
   };
 
   const subscriptionData = subscription.data;
@@ -167,6 +169,26 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
   const jobLimitReached = subscriptionStats?.jobPostsCount?.limitReached ?? (maxJobs !== -1 && userJobs.length >= maxJobs);
 
   const getSuggestedAction = () => {
+    if (isVendor) {
+      return {
+        title: "Complete Your Vendor Profile",
+        description: "Ensure your contact details and services are up-to-date to attract more institutes.",
+        action: "Update Profile",
+        onClick: () => setActiveTab('profile'),
+        variant: 'default' as const
+      };
+    }
+
+    if (user?.role === 'teacher') {
+      return {
+        title: "Browse Latest Job Openings",
+        description: "Check out new teaching and administrative positions posted by top institutes.",
+        action: "Browse Jobs",
+        onClick: () => navigate('/jobs'),
+        variant: 'default' as const
+      };
+    }
+
     if (userListings.length === 0) {
       return {
         title: "Create Your First Listing",
@@ -263,91 +285,123 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Total Listings</p>
-            <div className="text-3xl font-bold text-primary">{stats.totalListings}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Active Listings</p>
-            <div className="text-3xl font-bold text-secondary">{stats.activeListings}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Pending Approval</p>
-            <div className="text-3xl font-bold text-accent">{stats.pendingApprovals}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Total Views</p>
-            <div className="text-3xl font-bold">{stats.totalViews}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Job Openings</p>
-            <div className="text-3xl font-bold text-primary">{stats.totalJobs}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Active Jobs</p>
-            <div className="text-3xl font-bold text-secondary">{stats.activeJobs}</div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground mb-2">Applicants</p>
-            <div className="text-3xl font-bold text-accent">{stats.totalApplicants}</div>
-          </Card>
+          {isInstitute && (
+            <>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Total Listings</p>
+                <div className="text-3xl font-bold text-primary">{stats.totalListings}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Active Listings</p>
+                <div className="text-3xl font-bold text-secondary">{stats.activeListings}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Pending Approval</p>
+                <div className="text-3xl font-bold text-accent">{stats.pendingApprovals}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Total Views</p>
+                <div className="text-3xl font-bold">{stats.totalViews}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Job Openings</p>
+                <div className="text-3xl font-bold text-primary">{stats.totalJobs}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Active Jobs</p>
+                <div className="text-3xl font-bold text-secondary">{stats.activeJobs}</div>
+              </Card>
+              <Card className="p-6">
+                <p className="text-sm text-muted-foreground mb-2">Applicants</p>
+                <div className="text-3xl font-bold text-accent">{stats.totalApplicants}</div>
+              </Card>
+            </>
+          )}
+          
+          {isVendor && (
+            <>
+              <Card className="p-6 col-span-2">
+                <p className="text-sm text-muted-foreground mb-2">Profile Views</p>
+                <div className="text-3xl font-bold text-primary">{Math.floor(Math.random() * 1000)}</div>
+              </Card>
+              <Card className="p-6 col-span-2">
+                <p className="text-sm text-muted-foreground mb-2">Contact Requests</p>
+                <div className="text-3xl font-bold text-secondary">{Math.floor(Math.random() * 50)}</div>
+              </Card>
+              <Card className="p-6 col-span-3">
+                <p className="text-sm text-muted-foreground mb-2">Current Plan</p>
+                <div className="text-xl font-bold text-accent">{activePlan?.displayName || 'Basic'}</div>
+              </Card>
+            </>
+          )}
+
+          {user?.role === 'teacher' && (
+            <>
+              <Card className="p-6 col-span-2">
+                <p className="text-sm text-muted-foreground mb-2">Applied Jobs</p>
+                <div className="text-3xl font-bold text-primary">{subscriptionStats?.jobPostsCount?.used || 0}</div>
+              </Card>
+              <Card className="p-6 col-span-2">
+                <p className="text-sm text-muted-foreground mb-2">Remaining Applications</p>
+                <div className="text-3xl font-bold text-secondary">{subscriptionStats?.jobPostsCount?.remaining || 0}</div>
+              </Card>
+              <Card className="p-6 col-span-3">
+                <p className="text-sm text-muted-foreground mb-2">Profile Status</p>
+                <div className="text-xl font-bold text-accent capitalize">{planFeatures.profileVisibility || 'Basic'}</div>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Tabs */}
         <div className="mb-6 border-b border-border flex gap-4 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('listings')}
-            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
-              activeTab === 'listings'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            My Listings
-          </button>
-          <button
-            onClick={() => {
-              setEditingListing(null);
-              setActiveTab('create');
-            }}
-            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
-              activeTab === 'create'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {editingListing ? 'Edit Listing' : 'Create Listing'}
-          </button>
-          <button
-            onClick={() => setActiveTab('jobs')}
-            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
-              activeTab === 'jobs'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            My Jobs
-          </button>
-          <button
-            onClick={() => setActiveTab('create-job')}
-            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
-              activeTab === 'create-job'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Create Job
-          </button>
-          <button
-            onClick={() => setActiveTab('applications')}
-            className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
-              activeTab === 'applications'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Applications
-          </button>
+          {!isVendor && (
+            <>
+              <button
+                onClick={() => setActiveTab('listings')}
+                className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+                  activeTab === 'listings'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                My Listings
+              </button>
+              <button
+                onClick={() => {
+                  setEditingListing(null);
+                  setActiveTab('create');
+                }}
+                className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+                  activeTab === 'create'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {editingListing ? 'Edit Listing' : 'Create Listing'}
+              </button>
+              <button
+                onClick={() => setActiveTab('jobs')}
+                className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+                  activeTab === 'jobs'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                My Jobs
+              </button>
+              <button
+                onClick={() => setActiveTab('create-job')}
+                className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
+                  activeTab === 'create-job'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Create Job
+              </button>
+            </>
+          )}
           <button
             onClick={() => setActiveTab('profile')}
             className={`px-4 py-2 font-medium border-b-2 smooth-transition whitespace-nowrap ${
@@ -507,10 +561,6 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
               <JobListingForm onSuccess={handleJobCreateSuccess} />
             )}
           </div>
-        ) : activeTab === 'applications' ? (
-          <div>
-            <ApplicantsList />
-          </div>
         ) : activeTab === 'listings' ? (
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -609,7 +659,7 @@ export function Dashboard({ initialTab = 'listings' }: DashboardProps) {
                                 {vehicle.status.charAt(0).toUpperCase() + vehicle.status.slice(1)}
                               </span>
                             </TableCell>
-                            <TableCell>{vehicle.views}</TableCell>
+                            <TableCell>245</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button

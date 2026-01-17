@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 
 export function JobBrowse() {
-  const { user } = useAuth();
+  const { user, subscription } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -47,9 +47,12 @@ export function JobBrowse() {
   };
 
   const hasActiveFilters = searchTerm !== '' || typeFilter !== 'all' || departmentFilter !== 'all';
-  // Note: Subscription check simplified until full integration
-  const isFreePlan = !user;
-  const hasDelay = isFreePlan || !user;
+  
+  // Subscription check
+  const activePlanId = subscription?.data?.subscriptionPlanId || user?.subscription?.planId;
+  const activePlan = subscription?.plans?.find(p => p.id === activePlanId);
+  const isFreePlan = !user || activePlan?.price === 0;
+  const hasDelay = isFreePlan;
 
   if (loading) {
     return (
