@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
 import { AlertCircle, Zap } from 'lucide-react';
 import { SubscriptionUsageStats } from '@/types/subscriptionTypes';
+import { useAuth } from '@/context/AuthContext';
 
 interface SubscriptionUsageCardProps {
   stats: SubscriptionUsageStats | null;
@@ -11,6 +12,8 @@ interface SubscriptionUsageCardProps {
 }
 
 export function SubscriptionUsageCard({ stats, loading }: SubscriptionUsageCardProps) {
+  const { user } = useAuth();
+
   if (loading) {
     return (
       <Card className="p-6 bg-muted/50 animate-pulse">
@@ -36,8 +39,18 @@ export function SubscriptionUsageCard({ stats, loading }: SubscriptionUsageCardP
 
   const browsePercentage = Math.min(stats.browseCount.percentage, 100);
   const listingPercentage = Math.min(stats.listingCount.percentage, 100);
+  const jobPostsPercentage = stats.jobPostsCount ? Math.min(stats.jobPostsCount.percentage, 100) : 0;
+  
   const browseWarning = browsePercentage >= 80;
   const listingWarning = listingPercentage >= 80;
+  const jobPostsWarning = jobPostsPercentage >= 80;
+
+  const isTeacher = user?.role === 'teacher';
+  const isInstitute = user?.role === 'institute';
+
+  const showListings = isInstitute && (stats.listingCount.allowed > 0 || stats.listingCount.used > 0);
+  const showJobPosts = isInstitute && stats.jobPostsCount && (stats.jobPostsCount.allowed > 0 || stats.jobPostsCount.used > 0);
+  const showApplications = isTeacher && stats.jobPostsCount && (stats.jobPostsCount.allowed > 0 || stats.jobPostsCount.used > 0);
 
   return (
     <Card className="p-6 space-y-6">
@@ -77,46 +90,102 @@ export function SubscriptionUsageCard({ stats, loading }: SubscriptionUsageCardP
                 Browse Limit Warning
               </p>
               <p className="text-xs text-amber-800 mt-1">
-                You're using {Math.round(browsePercentage)}% of your monthly browse limit. Contact your administrator to increase your plan.
+                You're using {Math.round(browsePercentage)}% of your monthly browse limit. Upgrade your plan for more access.
               </p>
             </div>
           </Alert>
         )}
 
-        {/* Listing Count */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">Listings Created</span>
-              {listingWarning && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  <Zap className="w-3 h-3 mr-1" />
-                  High Usage
-                </Badge>
-              )}
+        {/* Listing Count - Institute Only */}
+        {showListings && (
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm">Listings Created</span>
+                {listingWarning && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Zap className="w-3 h-3 mr-1" />
+                    High Usage
+                  </Badge>
+                )}
+              </div>
+              <span className="text-sm font-medium">
+                {stats.listingCount.used} / {stats.listingCount.allowed}
+              </span>
             </div>
-            <span className="text-sm font-medium">
-              {stats.listingCount.used} / {stats.listingCount.allowed}
-            </span>
+            <Progress
+              value={listingPercentage}
+              className={`h-2 ${listingWarning ? 'bg-amber-100' : ''}`}
+            />
+            <p className="text-xs text-muted">
+              {stats.listingCount.remaining} listing{stats.listingCount.remaining !== 1 ? 's' : ''} remaining
+            </p>
           </div>
-          <Progress
-            value={listingPercentage}
-            className={`h-2 ${listingWarning ? 'bg-amber-100' : ''}`}
-          />
-          <p className="text-xs text-muted">
-            {stats.listingCount.remaining} listing{stats.listingCount.remaining !== 1 ? 's' : ''} remaining
-          </p>
-        </div>
+        )}
 
-        {listingWarning && (
+        {/* Job Post Count - Institute Only */}
+        {showJobPosts && (
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm">Job Posts</span>
+                {jobPostsWarning && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Zap className="w-3 h-3 mr-1" />
+                    High Usage
+                  </Badge>
+                )}
+              </div>
+              <span className="text-sm font-medium">
+                {stats.jobPostsCount!.used} / {stats.jobPostsCount!.allowed}
+              </span>
+            </div>
+            <Progress
+              value={jobPostsPercentage}
+              className={`h-2 ${jobPostsWarning ? 'bg-amber-100' : ''}`}
+            />
+            <p className="text-xs text-muted">
+              {stats.jobPostsCount!.remaining} post{stats.jobPostsCount!.remaining !== 1 ? 's' : ''} remaining
+            </p>
+          </div>
+        )}
+
+        {/* Job Applications - Teacher Only */}
+        {showApplications && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm">Job Applications</span>
+                {jobPostsWarning && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Zap className="w-3 h-3 mr-1" />
+                    High Usage
+                  </Badge>
+                )}
+              </div>
+              <span className="text-sm font-medium">
+                {stats.jobPostsCount!.used} / {stats.jobPostsCount!.allowed}
+              </span>
+            </div>
+            <Progress
+              value={jobPostsPercentage}
+              className={`h-2 ${jobPostsWarning ? 'bg-amber-100' : ''}`}
+            />
+            <p className="text-xs text-muted">
+              {stats.jobPostsCount!.remaining} application{stats.jobPostsCount!.remaining !== 1 ? 's' : ''} remaining
+            </p>
+          </div>
+        )}
+
+        {(listingWarning || (isInstitute && jobPostsWarning) || (isTeacher && jobPostsWarning)) && (
           <Alert variant="default" className="mt-6 border-amber-200 bg-amber-50">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             <div className="ml-4">
               <p className="font-semibold text-amber-900 text-sm">
-                Listing Limit Warning
+                Usage Limit Warning
               </p>
               <p className="text-xs text-amber-800 mt-1">
-                You're using {Math.round(listingPercentage)}% of your listing quota. Contact your administrator to increase your plan.
+                You're approaching your usage quota. Contact your administrator to increase your plan.
               </p>
             </div>
           </Alert>

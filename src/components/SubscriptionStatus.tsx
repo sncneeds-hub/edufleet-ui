@@ -223,6 +223,10 @@ export function SubscriptionStatus({
   const isExpiringSoon = stats?.isExpiringSoon ?? false;
   const isExpired = stats?.isExpired ?? false;
 
+  const isTeacher = user?.role === 'teacher';
+  const isInstitute = user?.role === 'institute';
+  const isVendor = user?.role === 'vendor';
+
   // Filter plans based on user role to show only relevant plans
   const filteredPlans = plans.filter((plan: any) => {
     if (!user) return true;
@@ -347,10 +351,18 @@ export function SubscriptionStatus({
               <p className="text-xs font-medium text-muted-foreground uppercase">Browse Used</p>
               <p className="text-2xl font-bold mt-1">{stats?.browseCount?.used ?? 0} / {stats?.browseCount?.allowed ?? 0}</p>
             </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase">Listings Used</p>
-              <p className="text-2xl font-bold mt-1">{stats?.listingCount?.used ?? 0} / {stats?.listingCount?.allowed ?? 0}</p>
-            </div>
+            {isInstitute && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Listings Used</p>
+                <p className="text-2xl font-bold mt-1">{stats?.listingCount?.used ?? 0} / {stats?.listingCount?.allowed ?? 0}</p>
+              </div>
+            )}
+            {isTeacher && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Applications</p>
+                <p className="text-2xl font-bold mt-1">{stats?.jobPostsCount?.used ?? 0} / {stats?.jobPostsCount?.allowed ?? 0}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase">Valid Until</p>
               <p className="text-sm font-medium mt-1 break-words">
@@ -462,18 +474,58 @@ export function SubscriptionStatus({
                   </div>
                   
                   <div className="space-y-2 mb-6 flex-1">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>{plan.features.maxListings === 0 ? 'No listings' : `${plan.features.maxListings} Listings`}</span>
-                    </div>
+                    {/* Common */}
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span>{plan.features.maxBrowsesPerMonth} Browse Views</span>
                     </div>
-                    {plan.features.priorityListings && (
+
+                    {/* Institute */}
+                    {plan.planType === 'institute' && (
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>{plan.features.maxVehicleListings || 0} Vehicle Listings</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>{plan.features.maxJobPosts || 0} Job Posts</span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Teacher */}
+                    {plan.planType === 'teacher' && (
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>{plan.features.maxJobApplications || 0} Applications</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>{plan.features.profileVisibility || 'Basic'} Visibility</span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Vendor */}
+                    {plan.planType === 'vendor' && (
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>{plan.features.maxProductListings || 0} Product Listings</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Star className="w-4 h-4 text-amber-500" />
+                          <span>Priority Vendor Listing</span>
+                        </div>
+                      </>
+                    )}
+
+                    {plan.features.analytics && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Star className="w-4 h-4 text-amber-500" />
-                        <span>Priority Listings</span>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Advanced Analytics</span>
                       </div>
                     )}
                   </div>
@@ -609,19 +661,19 @@ export function SubscriptionStatus({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground text-[10px] uppercase">Account Name</p>
-                <p className="font-medium">EduFleet Exchange Pvt Ltd</p>
+                <p className="font-medium">NAVEEN J</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-[10px] uppercase">Bank Name</p>
-                <p className="font-medium">HDFC Bank</p>
+                <p className="font-medium">SBI Bank</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-[10px] uppercase">Account Number</p>
-                <p className="font-mono font-bold text-lg tracking-wider">50200012345678</p>
+                <p className="font-mono font-bold text-lg tracking-wider">64182266761</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-[10px] uppercase">IFSC Code</p>
-                <p className="font-mono font-bold text-lg tracking-wider">HDFC0001234</p>
+                <p className="font-mono font-bold text-lg tracking-wider">SBIN0040884</p>
               </div>
             </div>
           </div>

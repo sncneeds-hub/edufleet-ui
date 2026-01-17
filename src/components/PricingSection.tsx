@@ -53,21 +53,43 @@ function PricingCardGrid({ plans, loading, onSelectPlan }: PricingCardGridProps)
       {plans.map((plan) => {
         const isPopular = plan.name.toLowerCase().includes('institute') || plan.name.toLowerCase().includes('pro');
         
-        // Extract displayable features
+        // Extract displayable features based on persona/planType
         const featuresList: string[] = [];
         if (Array.isArray(plan.features)) {
           featuresList.push(...plan.features);
         } else if (plan.features && typeof plan.features === 'object') {
           const f = plan.features as any;
-          if (f.maxListings !== undefined && f.maxListings > 0) featuresList.push(`${f.maxListings === 999999 ? 'Unlimited' : f.maxListings} Vehicle Listings`);
-          if (f.maxJobPosts !== undefined && f.maxJobPosts > 0) featuresList.push(`${f.maxJobPosts === 999999 ? 'Unlimited' : f.maxJobPosts} Job Posts`);
+          const pt = plan.planType;
+
+          // Common features
           if (f.maxBrowsesPerMonth !== undefined) featuresList.push(`${f.maxBrowsesPerMonth} Browse Views/Month`);
           if (f.dataDelayDays !== undefined) featuresList.push(f.dataDelayDays === 0 ? 'Real-time Data Access' : `${f.dataDelayDays} Days Data Delay`);
           if (f.analytics) featuresList.push("Advanced Analytics");
-          if (f.priorityListings) featuresList.push("Priority Listing Status");
-          if (f.canAdvertiseVehicles) featuresList.push("Advertise Vehicles");
-          if (f.instantVehicleAlerts) featuresList.push("Instant Alerts");
           if (f.supportLevel) featuresList.push(`${f.supportLevel.charAt(0).toUpperCase() + f.supportLevel.slice(1)} Support`);
+
+          // Institute-specific features
+          if (pt === 'institute') {
+            if (f.maxVehicleListings !== undefined && f.maxVehicleListings > 0) featuresList.push(`${f.maxVehicleListings === 999999 ? 'Unlimited' : f.maxVehicleListings} Vehicle Listings`);
+            if (f.maxJobPosts !== undefined && f.maxJobPosts > 0) featuresList.push(`${f.maxJobPosts === 999999 ? 'Unlimited' : f.maxJobPosts} Job Posts`);
+            if (f.priorityVehicleListings) featuresList.push("Priority Listing Status");
+            if (f.canAdvertiseVehicles) featuresList.push("Advertise Vehicles");
+            if (f.instantJobAlerts) featuresList.push("Instant Job Alerts");
+          }
+
+          // Vendor-specific features
+          if (pt === 'vendor') {
+            if (f.maxProductListings !== undefined && f.maxProductListings > 0) featuresList.push(`${f.maxProductListings} Product/Service Listings`);
+            if (f.priorityProductListings) featuresList.push("Priority Vendor Listing");
+            if (f.canAdvertiseProducts) featuresList.push("Advertise Products");
+          }
+
+          // Teacher-specific features
+          if (pt === 'teacher') {
+            if (f.maxJobApplications !== undefined && f.maxJobApplications > 0) featuresList.push(`${f.maxJobApplications} Job Applications`);
+            if (f.profileVisibility) featuresList.push(`${f.profileVisibility.charAt(0).toUpperCase() + f.profileVisibility.slice(1)} Profile Visibility`);
+            if (f.canAccessJobBoard) featuresList.push("Job Board Access");
+            if (f.instantJobNotifications) featuresList.push("Instant Job Notifications");
+          }
         }
 
         return (

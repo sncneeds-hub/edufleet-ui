@@ -41,6 +41,8 @@ export function Header() {
 
   // Determine which menu items to show based on user role
   const shouldShowTeacherNav = user?.role === 'teacher';
+  // Check if user is vendor to hide specific links
+  const isVendor = user?.role === 'vendor';
   const shouldShowInstituteNav = user?.role === 'institute' || (!user?.role && user);
   const showPromoLinks = !(user?.role === 'institute' || user?.role === 'teacher');
 
@@ -91,7 +93,7 @@ export function Header() {
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-6">
             <nav className="flex items-center gap-7 text-sm font-medium">
-              {!shouldShowTeacherNav && (
+              {!shouldShowTeacherNav && !isVendor && (
                 <>
                   <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Vehicles</span>
@@ -112,6 +114,23 @@ export function Header() {
                     </Link>
                   )}
                   <Link to="/#pricing" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Pricing</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                  <div className="h-5 w-px bg-border/70"></div>
+                </>
+              )}
+              {isVendor && (
+                <>
+                  <Link to="/jobs" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Jobs</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                  <Link to="/suppliers" className="text-foreground/70 hover:text-primary transition-all relative group">
+                    <span>Suppliers</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+                  </Link>
+                   <Link to="/#pricing" className="text-foreground/70 hover:text-primary transition-all relative group">
                     <span>Pricing</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                   </Link>
@@ -209,7 +228,7 @@ export function Header() {
         {mobileMenuOpen && (
           <nav className="lg:hidden mt-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {!shouldShowTeacherNav ? (
+              {!shouldShowTeacherNav && !isVendor ? (
                 <>
                   <Link to={user?.role === 'institute' ? "/dashboard?tab=listings" : "/browse"} className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Vehicles</span>
@@ -225,6 +244,18 @@ export function Header() {
                       <span className="font-medium">Find Teacher</span>
                     </Link>
                   )}
+                  <Link to="/#pricing" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Pricing</span>
+                  </Link>
+                </>
+              ) : isVendor ? (
+                <>
+                   <Link to="/jobs" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Jobs</span>
+                  </Link>
+                  <Link to="/suppliers" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <span className="font-medium">Suppliers</span>
+                  </Link>
                   <Link to="/#pricing" className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <span className="font-medium">Pricing</span>
                   </Link>
