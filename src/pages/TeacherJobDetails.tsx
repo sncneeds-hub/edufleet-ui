@@ -336,7 +336,7 @@ export function TeacherJobDetails() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Posted:</span>
                         <span className="font-semibold">
-                          {formatDate(job.postedDate || job.postedAt)}
+                         {formatDate(job.postedDate || job.postedAt || job.createdAt)}
                         </span>
                       </div>
                     )}
