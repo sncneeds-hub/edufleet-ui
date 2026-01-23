@@ -4,10 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Briefcase, Building2, Clock, DollarSign, Share2 } from 'lucide-react';
+import { MapPin, Briefcase, Building2, Clock, DollarSign } from 'lucide-react';
 import { MaskedContent } from '@/components/MaskedContent';
 import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ShareButton';
+
+// Helper function to safely format dates
+const formatDate = (dateValue: string | undefined | null): string => {
+  if (!dateValue) return 'Not specified';
+  try {
+    const date = new Date(dateValue);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Not specified';
+    return date.toLocaleDateString();
+  } catch {
+    return 'Not specified';
+  }
+};
 
 // Helper function to format location
 const formatLocation = (location: any): string => {
@@ -75,10 +88,10 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
       className={`cursor-pointer relative group flex-shrink-0 w-full h-full ${className || ''}`}
       style={style}
     >
-      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-xl w-full h-full flex flex-col p-0 bg-card group-hover:border-primary/20">
+      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 rounded-xl w-full h-full flex flex-col p-0 bg-card group-hover:border-primary/20 border-beam">
         {/* Top: Icon/Logo Section (Hero) */}
-        <div className="relative overflow-hidden bg-muted aspect-[4/3] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-colors duration-500">
-          <Briefcase className="w-16 h-16 text-primary/40 group-hover:text-primary/60 transition-colors duration-500 group-hover:scale-110 transform" />
+        <div className="relative overflow-hidden bg-muted aspect-[4/3] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-colors duration-700">
+          <Briefcase className="w-16 h-16 text-primary/40 group-hover:text-primary/60 transition-all duration-700 group-hover:scale-125 transform" />
           
           {job.isPriority && (
             <div className="absolute top-1 left-1 z-10 scale-75 origin-top-left pointer-events-none">
@@ -165,7 +178,7 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
             
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Clock className="w-3 h-3" />
-              <span>{new Date(job.postedAt).toLocaleDateString()}</span>
+              <span>{formatDate(job.postedAt || job.postedDate || job.createdAt)}</span>
             </div>
           </div>
           

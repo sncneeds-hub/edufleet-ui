@@ -59,6 +59,19 @@ const formatExperience = (experience: any): string => {
   return String(experience);
 };
 
+// Helper function to safely format dates
+const formatDate = (dateValue: string | undefined | null): string => {
+  if (!dateValue) return 'Not specified';
+  try {
+    const date = new Date(dateValue);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Not specified';
+    return date.toLocaleDateString();
+  } catch {
+    return 'Not specified';
+  }
+};
+
 export function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -209,7 +222,7 @@ export function JobDetails() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
+                     <span>Posted: {formatDate(job.postedDate || job.postedAt || job.createdAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -312,13 +325,15 @@ export function JobDetails() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Deadline</p>
-                    <p className="font-medium">{new Date(job.deadline).toLocaleDateString()}</p>
+                {job.applicationDeadline && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Deadline</p>
+                      <p className="font-medium">{formatDate(job.applicationDeadline)}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {isUnmasked && job.applicants !== undefined && (
                   <div className="flex items-center gap-3">
@@ -344,18 +359,32 @@ export function JobDetails() {
                 <h4 className="font-medium text-sm">Contact Information</h4>
                 {isUnmasked ? (
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="w-4 h-4" />
-                      <a href={`mailto:${job.instituteEmail}`} className="hover:text-primary">
-                        {job.instituteEmail}
-                      </a>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="w-4 h-4" />
-                      <a href={`tel:${job.institutePhone}`} className="hover:text-primary">
-                        {job.institutePhone}
-                      </a>
-                    </div>
+                    {(job.contactEmail || job.instituteEmail || job.instituteId?.email) ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="w-4 h-4" />
+                         <a href={`mailto:${job.contactEmail || job.instituteEmail || job.instituteId?.email}`} className="hover:text-primary">
+                          {job.contactEmail || job.instituteEmail || job.instituteId?.email}
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="w-4 h-4" />
+                        <span>Contact email not provided</span>
+                      </div>
+                    )}
+                      {(job.contactPhone || job.institutePhone || job.instituteId?.phone) ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="w-4 h-4" />
+<a href={`tel:${job.contactPhone || job.institutePhone || job.instituteId?.phone}`} className="hover:text-primary">
+                          {job.contactPhone || job.institutePhone || job.instituteId?.phone}
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="w-4 h-4" />
+                        <span>Contact phone not provided</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <MaskedContent variant="block" label="Login to view contact info" />

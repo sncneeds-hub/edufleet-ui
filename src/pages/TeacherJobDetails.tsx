@@ -70,6 +70,19 @@ const formatExperience = (experience: any): string => {
   return String(experience);
 };
 
+// Helper function to safely format dates
+const formatDate = (dateValue: string | undefined | null): string => {
+  if (!dateValue) return 'Not specified';
+  try {
+    const date = new Date(dateValue);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Not specified';
+    return date.toLocaleDateString();
+  } catch {
+    return 'Not specified';
+  }
+};
+
 export function TeacherJobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -247,7 +260,7 @@ export function TeacherJobDetails() {
                   {job.department && <Badge variant="outline">{job.department}</Badge>}
                   {job.deadline && (
                     <Badge variant="outline">
-                      Deadline: {new Date(job.deadline).toLocaleDateString()}
+                      Deadline: {formatDate(job.deadline)}
                     </Badge>
                   )}
                 </div>
@@ -319,11 +332,11 @@ export function TeacherJobDetails() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-sm space-y-2">
-                    {job.postedDate && (
+                    {(job.postedDate || job.postedAt) && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Posted:</span>
                         <span className="font-semibold">
-                          {new Date(job.postedDate).toLocaleDateString()}
+                          {formatDate(job.postedDate || job.postedAt)}
                         </span>
                       </div>
                     )}
@@ -331,7 +344,7 @@ export function TeacherJobDetails() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Deadline:</span>
                         <span className="font-semibold text-red-500">
-                          {new Date(job.deadline).toLocaleDateString()}
+                          {formatDate(job.deadline)}
                         </span>
                       </div>
                     )}
@@ -360,9 +373,30 @@ export function TeacherJobDetails() {
                 <CardTitle>Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Contact details will be available after your application is reviewed.
-                </p>
+                {(job.contactEmail || job.instituteEmail || job.instituteId?.email || job.contactPhone || job.institutePhone || job.instituteId?.phone) ? (
+                  <div className="space-y-2 text-sm">
+                   {(job.contactEmail || job.instituteEmail || job.instituteId?.email) && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <a href={`mailto:${job.contactEmail || job.instituteEmail || job.instituteId?.email}`} className="hover:text-primary">
+                          {job.contactEmail || job.instituteEmail || job.instituteId?.email}
+                        </a>
+                      </div>
+                    )}
+                     {(job.contactPhone || job.institutePhone || job.instituteId?.phone) && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                       <a href={`tel:${job.contactPhone || job.institutePhone || job.instituteId?.phone}`} className="hover:text-primary">
+                          {job.contactPhone || job.institutePhone || job.instituteId?.phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Contact details will be available after your application is reviewed.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
