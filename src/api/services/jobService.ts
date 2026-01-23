@@ -16,15 +16,22 @@ export interface Job {
   type: 'full-time' | 'part-time' | 'contract';
   department?: string;
   experience: string | { min: number; max: number };
-  salary: string | { min?: number; max?: number };
+  salary: string | { min?: number; max?: number; currency?: string };
   description: string;
   requirements: string[];
+  responsibilities?: string[];
   benefits?: string[];
-  postedDate: string;
+  postedDate?: string;
   postedAt?: string;
   deadline?: string;
   status?: 'open' | 'closed';
   isPriority?: boolean;
+  applicants?: number;
+  // Contact information
+  instituteEmail?: string;
+  institutePhone?: string;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 export interface JobFilters {
@@ -285,6 +292,33 @@ export async function updateApplicationStatus(
   }
 }
 
+/**
+ * Reschedule interview
+ */
+export async function rescheduleInterview(
+  applicationId: string,
+  interviewData: any
+): Promise<ApiResponse<any>> {
+  try {
+    const result = await apiClient.put<any>(`/jobs/applications/${applicationId}/reschedule`, {
+      interviewScheduled: interviewData
+    });
+    
+    return {
+      success: true,
+      data: result,
+      message: 'Interview rescheduled successfully',
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    throw {
+      success: false,
+      error: error.message || 'Failed to reschedule interview',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
 // Default export for convenience
 export const jobService = {
   getAllJobs: getJobs,
@@ -297,4 +331,5 @@ export const jobService = {
   getMyApplications,
   getJobApplications: getApplications,
   updateApplicationStatus,
+  rescheduleInterview,
 };
