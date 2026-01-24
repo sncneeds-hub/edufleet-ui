@@ -24,6 +24,7 @@ import { Advertise } from '@/pages/Advertise';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/sonner';
+import { FloatingActions } from '@/components/FloatingActions';
 
 // Admin imports
 import { AdminLogin } from '@/pages/AdminLogin';
@@ -145,6 +146,7 @@ function App() {
               </Routes>
             </main>
             <Footer />
+        <FloatingActions />
           </div>
           </AdProvider>
         </NotificationProvider>
