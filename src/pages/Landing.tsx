@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { VehicleCard } from '@/components/VehicleCard';
 import { JobCard } from '@/components/JobCard';
@@ -95,66 +96,76 @@ export function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background font-sans">
+    <div className="min-h-screen bg-background font-sans noise-bg relative">
       
       {/* Hero Section - Professional Premium Design */}
-      <section className="relative pt-28 pb-40 md:pt-44 md:pb-60 bg-gradient-hero overflow-hidden">
+      <section className="relative pt-28 pb-40 md:pt-44 md:pb-60 overflow-hidden">
+        {/* Professional Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://v3b.fal.media/files/b/0a8b3c54/2hCADZMTxkHVX4wRB75ZE.png" 
+            alt="Educational Marketplace" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-secondary/70 backdrop-blur-[2px]"></div>
+        </div>
+
         {/* Premium Background Elements */}
-        <div className="absolute inset-0 opacity-[0.07]">
+        <div className="absolute inset-0 opacity-[0.1] z-[1]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#ffffff_0.5px,transparent_0.5px)] [background-size:24px_24px]"></div>
         </div>
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-          <div className="absolute top-10 -left-20 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] animate-float"></div>
-          <div className="absolute bottom-10 -right-20 w-[600px] h-[600px] bg-accent/15 rounded-full blur-[140px] animate-float delay-1000"></div>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-[1]">
+          <div className="absolute top-10 -left-20 w-[500px] h-[500px] bg-secondary/30 rounded-full blur-[120px] animate-float"></div>
+          <div className="absolute bottom-10 -right-20 w-[600px] h-[600px] bg-accent/20 rounded-full blur-[140px] animate-float delay-1000"></div>
         </div>
         
         <div className="container relative z-10 mx-auto px-4 lg:px-6 text-center">
           {/* Premium Trust Badge */}
-          <div className="inline-flex items-center gap-2.5 bg-white/15 backdrop-blur-md border border-white/25 rounded-full px-6 py-2.5 mb-10 animate-in-fade shadow-lg">
-            <div className="w-2 h-2 bg-success rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-            <span className="text-white/95 text-sm font-semibold">Trusted by 5,000+ Educational Institutes</span>
+          <div className="inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2.5 mb-10 animate-in-fade shadow-xl">
+            <div className="w-2 h-2 bg-success rounded-full animate-pulse shadow-[0_0_12px_rgba(34,197,94,0.8)]"></div>
+            <span className="text-white/95 text-sm font-semibold tracking-wide">Trusted by 5,000+ Educational Institutes</span>
           </div>
 
           {/* Professional Main Headline */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold text-white mb-7 tracking-tight leading-[1.1] animate-in-slide-up">
+          <h1 className="text-5xl md:text-6xl lg:text-8xl font-display font-bold text-white mb-8 tracking-tighter leading-[1] animate-in-slide-up">
             India's Leading
             <br className="md:hidden" />
-            <span className="text-accent"> Education </span>
+            <span className="text-accent italic"> Education </span>
             <br />
             <span className="relative inline-block">
               Marketplace
-              <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-accent via-accent-light to-transparent rounded-full"></span>
+              <span className="absolute -bottom-3 left-0 w-full h-1.5 bg-gradient-to-r from-accent via-accent-light to-transparent rounded-full shadow-glow"></span>
             </span>
           </h1>
           
-          <p className="text-white/90 mb-14 text-lg md:text-xl lg:text-2xl max-w-4xl mx-auto font-medium leading-relaxed animate-in-slide-up delay-100">
-            Connect with <span className="font-bold text-white">Vehicles</span>, <span className="font-bold text-white">Jobs</span>, <span className="font-bold text-white">Suppliers</span> & <span className="font-bold text-white">Teachers</span>
+          <p className="text-white/90 mb-16 text-lg md:text-xl lg:text-2xl max-w-4xl mx-auto font-medium leading-relaxed animate-in-slide-up delay-100">
+            Connect with <span className="font-bold text-white border-b-2 border-accent/50 pb-0.5">Vehicles</span>, <span className="font-bold text-white border-b-2 border-accent/50 pb-0.5">Jobs</span>, <span className="font-bold text-white border-b-2 border-accent/50 pb-0.5">Suppliers</span> & <span className="font-bold text-white border-b-2 border-accent/50 pb-0.5">Teachers</span>
             <br className="hidden md:block" />
-            <span className="text-white/80">All in One Platform for Educational Institutes</span>
+            <span className="text-white/80 mt-2 block">The Definitive Resource for Modern Educational Infrastructure</span>
           </p>
 
           {/* Professional Search Box */}
-          <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-2.5 flex flex-col md:flex-row gap-2 animate-in-scale delay-200 hover:shadow-[0_30px_90px_rgba(0,0,0,0.25)] transition-all duration-300 border border-gray-100">
+          <div className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm rounded-2xl shadow-[0_30px_100px_rgba(0,0,0,0.4)] p-3 flex flex-col md:flex-row gap-2 animate-in-scale delay-200 border border-white/20 ring-1 ring-black/5">
             {/* Location Input */}
             <div className="relative md:w-[28%]">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70">
                 <MapPin className="w-5 h-5" />
               </div>
               <input 
                 type="text" 
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-medium bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/30 transition-colors"
+                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-semibold bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/50 transition-colors"
                 placeholder="Mumbai, India"
               />
             </div>
             
             {/* Vertical Divider */}
-            <div className="hidden md:block w-px bg-border self-stretch my-2"></div>
+            <div className="hidden md:block w-px bg-border/60 self-stretch my-2"></div>
             
             {/* Main Search Input */}
             <div className="relative flex-1">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70">
                 <Search className="w-5 h-5" />
               </div>
               <input 
@@ -162,18 +173,18 @@ export function Landing() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-medium bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/30 transition-colors"
+                className="w-full pl-12 pr-4 py-4 outline-none text-foreground font-semibold bg-transparent placeholder:text-muted-foreground rounded-xl focus:bg-muted/50 transition-colors"
                 placeholder="Try: School Bus, Math Teacher, Lab Equipment..."
               />
             </div>
 
             {/* Search Button */}
-            <div className="md:w-40 flex items-center">
+            <div className="md:w-44 flex items-center">
               <Button 
                 onClick={handleSearch}
                 variant="accent"
                 size="lg"
-                className="w-full font-bold text-base rounded-xl flex items-center justify-center gap-2 min-h-[56px]"
+                className="w-full font-bold text-base rounded-xl flex items-center justify-center gap-2 min-h-[58px] shadow-lg hover:shadow-accent/30 transition-all active:scale-95"
               >
                 Search
                 <ArrowRight className="w-5 h-5" />
@@ -230,100 +241,162 @@ export function Landing() {
         <AdSlot placement="LP_TOP_BANNER" variant="banner" />
       </div>
 
-      {/* Feature Section 1: Vehicles - Hidden for Teachers */}
-      {!isTeacher && (
-        <section className="container mx-auto px-4 py-12">
-          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Truck className="w-6 h-6 text-primary" />
-              Premium Vehicles
-            </h2>
-            <Button variant="link" onClick={() => navigate('/browse')} className="text-primary">
-              View All
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {priorityLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="w-full h-[350px] rounded-lg" />
-              ))
-            ) : priorityListings.length > 0 ? (
-              priorityListings.slice(0, 4).map((vehicle) => (
-                <div key={vehicle.id || (vehicle as any)._id} className="h-full">
-                  <VehicleCard vehicle={vehicle} />
+          {/* Feature Section 1: Vehicles - Hidden for Teachers */}
+          {!isTeacher && (
+            <motion.section 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="container mx-auto px-4 py-16"
+            >
+              <div className="flex items-center justify-between mb-10 border-b border-gray-100 pb-5">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <Truck className="w-8 h-8 text-primary" />
+                    Premium Vehicles
+                  </h2>
+                  <p className="text-muted-foreground text-sm font-medium">Verified transport options for your institute</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center col-span-full py-8">No featured listings available</p>
-            )}
-          </div>
-        </section>
-      )}
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/browse')} 
+                  className="rounded-full border-primary/20 text-primary hover:bg-primary/5 px-6"
+                >
+                  View All Vehicles
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {priorityLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="w-full h-[380px] rounded-2xl" />
+                  ))
+                ) : priorityListings.length > 0 ? (
+                  priorityListings.slice(0, 4).map((vehicle, idx) => (
+                    <motion.div 
+                      key={vehicle.id || (vehicle as any)._id} 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: idx * 0.1 }}
+                      className="h-full"
+                    >
+                      <VehicleCard vehicle={vehicle} />
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center col-span-full py-12 bg-muted/30 rounded-2xl">No featured listings available</p>
+                )}
+              </div>
+            </motion.section>
+          )}
 
-      {/* Feature Section 2: Jobs */}
-      <section className="bg-slate-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Briefcase className="w-6 h-6 text-orange-600" />
-              Hot Jobs
-            </h2>
-            <Button variant="link" onClick={() => navigate('/jobs')} className="text-orange-600">
-              View All
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {jobsLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="w-full h-[180px] rounded-lg" />
-              ))
-            ) : featuredJobs.length > 0 ? (
-              featuredJobs.map((job) => (
-                <div key={job.id || (job as any)._id} className="h-full">
-                  <JobCard 
-                    job={job} 
-                    style={{ width: '100%', height: '100%' }} 
-                    className="w-full h-full shadow-sm hover:shadow-md transition-shadow bg-white"
-                  />
+          {/* Feature Section 2: Jobs */}
+          <motion.section 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="bg-slate-50 py-10"
+          >
+            <div className="container mx-auto px-4">
+              <div className="flex items-center justify-between mb-10 border-b border-gray-200 pb-5">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <Briefcase className="w-8 h-8 text-orange-600" />
+                    Hot Jobs
+                  </h2>
+                  <p className="text-muted-foreground text-sm font-medium">Exciting career opportunities in top institutes</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center col-span-full py-8">No jobs available</p>
-            )}
-          </div>
-        </div>
-      </section>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/jobs')} 
+                  className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 px-6"
+                >
+                  Explore Jobs
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
 
-      {/* Feature Section 3: Suppliers - Hidden for Teachers */}
-      {!isTeacher && (
-        <section className="container mx-auto px-4 py-12">
-          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-green-600" />
-              Top Suppliers
-            </h2>
-            <Button variant="link" onClick={() => navigate('/suppliers')} className="text-green-600">
-              View All
-            </Button>
-          </div>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(192px,1fr))] gap-6">
+                {jobsLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="w-[192px] h-[192px] rounded-lg" />
+                  ))
+                ) : featuredJobs.length > 0 ? (
+                  featuredJobs.map((job, idx) => (
+                    <motion.div 
+                      key={job.id || (job as any)._id} 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    >
+                      <JobCard 
+                        job={job} 
+                        className="shadow-sm hover:shadow-md transition-all bg-white"
+                      />
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center col-span-full py-12 bg-white/50 rounded-2xl border-2 border-dashed border-gray-200">No jobs available</p>
+                )}
+              </div>
+            </div>
+          </motion.section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {suppliersLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="w-full h-48 rounded-lg" />
-              ))
-            ) : featuredSuppliers.length > 0 ? (
-              featuredSuppliers.map((supplier) => (
-                <SupplierCard key={supplier.id || (supplier as any)._id} supplier={supplier} />
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center col-span-full py-8">No suppliers available</p>
-            )}
-          </div>
-        </section>
-      )}
+          {/* Feature Section 3: Suppliers - Hidden for Teachers */}
+          {!isTeacher && (
+            <motion.section 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="container mx-auto px-4 py-10"
+            >
+              <div className="flex items-center justify-between mb-10 border-b border-gray-100 pb-5">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                    <Building2 className="w-8 h-8 text-green-600" />
+                    Top Suppliers
+                  </h2>
+                  <p className="text-muted-foreground text-sm font-medium">Reliable vendors for all your institute needs</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/suppliers')} 
+                  className="rounded-full border-green-200 text-green-600 hover:bg-green-50 px-6"
+                >
+                  Find Suppliers
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(192px,1fr))] gap-6">
+                {suppliersLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="w-[192px] h-[192px] rounded-lg" />
+                  ))
+                ) : featuredSuppliers.length > 0 ? (
+                  featuredSuppliers.map((supplier, idx) => (
+                    <motion.div 
+                      key={supplier.id || (supplier as any)._id} 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    >
+                      <SupplierCard supplier={supplier} />
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center col-span-full py-12 bg-muted/30 rounded-2xl">No suppliers available</p>
+                )}
+              </div>
+            </motion.section>
+          )}
 
       {/* Inline Ad */}
       <div className="container mx-auto px-4 pb-12">
