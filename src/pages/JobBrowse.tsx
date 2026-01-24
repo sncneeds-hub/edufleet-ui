@@ -176,7 +176,7 @@ export function JobBrowse() {
             </div>
 
             {jobs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+             <div className="grid grid-cols-[repeat(auto-fill,minmax(192px,1fr))] gap-6">
                 {jobs.map((job, index) => (
                   <div key={job.id || (job as any)._id} className="animate-scale-in" style={{ animationDelay: `${index * 0.05}s` }}>
                     <JobCard job={job} />

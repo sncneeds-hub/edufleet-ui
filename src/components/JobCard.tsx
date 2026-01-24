@@ -85,125 +85,81 @@ export function JobCard({ job, isListing = false, className, style }: JobCardPro
   return (
     <div 
       onClick={handleClick}
-      className={`cursor-pointer relative group flex-shrink-0 w-full h-full ${className || ''}`}
+      className={`cursor-pointer relative group flex-shrink-0 w-[192px] h-[192px] ${className || ''}`}
       style={style}
     >
-      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 rounded-xl w-full h-full flex flex-col p-0 bg-card group-hover:border-primary/20 border-beam">
-        {/* Top: Icon/Logo Section (Hero) */}
-        <div className="relative overflow-hidden bg-muted aspect-[4/3] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-colors duration-700">
-          <Briefcase className="w-16 h-16 text-primary/40 group-hover:text-primary/60 transition-all duration-700 group-hover:scale-125 transform" />
-          
-          {job.isPriority && (
-            <div className="absolute top-1 left-1 z-10 scale-75 origin-top-left pointer-events-none">
-              <PriorityBadge />
-            </div>
-          )}
-
-          <div className="absolute bottom-2 right-2 flex gap-1">
-             <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/50">
-               {job.type}
-             </Badge>
+      <Card className="overflow-hidden border border-border/60 shadow-sm hover:shadow-md transition-all duration-300 rounded-lg w-full h-full flex flex-col p-2 bg-card group-hover:border-primary/40 border-beam">
+        {/* Compact Header */}
+        <div className="flex items-start justify-between gap-1 mb-1">
+          <div className="bg-primary/10 p-1.5 rounded-md">
+            <Briefcase className="w-4 h-4 text-primary" />
           </div>
-
-          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ShareButton
-              title={job.title}
-              text={`Check out this ${job.title} position at ${job.instituteName} on EduFleet Exchange!`}
-              url={`/job/${job.id || (job as any)._id}`}
-              variant="secondary"
-              size="icon"
-              className="h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm border-none shadow-sm hover:bg-background"
-            />
+          <div className="flex flex-col items-end">
+            <Badge variant="secondary" className="text-[8px] h-4 px-1 leading-none">
+              {job.type}
+            </Badge>
+            {job.isPriority && (
+              <div className="mt-0.5 scale-50 origin-top-right">
+                <PriorityBadge />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col flex-grow justify-between gap-3">
-          <div className="min-h-0 space-y-2">
-            <div>
-              {!isUnmasked && !isListing ? (
-                <MaskedContent variant="text" label="Login to view" className="mb-1">
-                  <h3 className="font-bold text-base leading-tight line-clamp-2 text-foreground mb-1 group-hover:text-primary transition-colors">
-                    {job.title}
-                  </h3>
-                </MaskedContent>
-              ) : (
-                <h3 className="font-bold text-base leading-tight line-clamp-2 text-foreground mb-1 group-hover:text-primary transition-colors" title={job.title}>
-                  {job.title}
-                </h3>
-              )}
-              
-              <div className="flex flex-col gap-1 text-xs text-muted-foreground mt-1">
-                <div className="flex items-center gap-1">
-                  <Building2 className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{job.instituteName}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{formatLocation(job.location)}</span>
-                </div>
+        <div className="flex flex-col flex-grow min-h-0">
+          {!isUnmasked && !isListing ? (
+            <MaskedContent variant="text" label="Login" className="h-4 w-full mb-0.5">
+              <h3 className="font-bold text-[13px] leading-tight line-clamp-2 text-foreground mb-0.5 group-hover:text-primary transition-colors">
+                {job.title}
+              </h3>
+            </MaskedContent>
+          ) : (
+            <h3 className="font-bold text-[13px] leading-tight line-clamp-2 text-foreground mb-0.5 group-hover:text-primary transition-colors" title={job.title}>
+              {job.title}
+            </h3>
+          )}
+          
+          <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Building2 className="w-2.5 h-2.5 flex-shrink-0" />
+              <span className="truncate">{job.instituteName}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
+              <span className="truncate">{formatLocation(job.location)}</span>
+            </div>
+          </div>
+
+          <div className="mt-auto pt-1.5 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-0.5 text-[11px] font-bold text-primary">
+                <DollarSign className="w-3 h-3" />
+                {isUnmasked || isListing ? (
+                  <span className="truncate">
+                    {(() => {
+                      const salary = formatSalary(job.salary);
+                      return `${(salary.min / 1000).toFixed(0)}k-${(salary.max / 1000).toFixed(0)}k`;
+                    })()}
+                  </span>
+                ) : (
+                  <MaskedContent variant="text" label="Login" className="w-10 h-3" />
+                )}
+              </div>
+              <div className="text-[8px] text-muted-foreground">
+                {formatDate(job.postedAt || job.postedDate || job.createdAt)}
               </div>
             </div>
-
-            {/* Description/Requirements Preview */}
-            <div className="flex flex-wrap gap-1.5">
-              {job.requirements.slice(0, 2).map((req, idx) => (
-                <span key={idx} className="text-[10px] bg-secondary/50 text-secondary-foreground px-1.5 py-0.5 rounded truncate max-w-[100px]">
-                  {req}
-                </span>
-              ))}
-              {job.requirements.length > 2 && (
-                <span className="text-[10px] text-muted-foreground px-1 py-0.5">
-                  +{job.requirements.length - 2}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-             <div className="min-w-0 flex items-center gap-1 text-sm font-semibold text-primary">
-              <DollarSign className="w-4 h-4" />
-              {isUnmasked || isListing ? (
-                <span className="truncate">
-                  {(() => {
-                    const salary = formatSalary(job.salary);
-                    return `${(salary.min / 1000).toFixed(0)}k - ${(salary.max / 1000).toFixed(0)}k`;
-                  })()}
-                  <span className="text-muted-foreground font-normal text-xs ml-1">/yr</span>
-                </span>
-              ) : (
-                <MaskedContent variant="text" label="Login" className="w-20 h-5" />
-              )}
-            </div>
             
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              <span>{formatDate(job.postedAt || job.postedDate || job.createdAt)}</span>
-            </div>
-          </div>
-          
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 mt-1">
             <Button 
               size="sm" 
-              variant="outline"
-              className="w-full text-xs h-8 border-primary text-primary hover:bg-primary hover:text-white"
+              className="w-full text-[10px] h-6 bg-primary hover:bg-primary/90 text-white border-none shadow-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 handleClick();
               }}
             >
-              View Details
-            </Button>
-            <Button 
-              size="sm" 
-              className="w-full text-xs h-8 bg-accent hover:bg-accent/90 text-white border-none shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClick();
-              }}
-            >
-              Apply
+              View & Apply
             </Button>
           </div>
         </div>
