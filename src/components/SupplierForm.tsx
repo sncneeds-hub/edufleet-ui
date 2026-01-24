@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,16 +6,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Plus, Building2, Mail, Phone, Globe, MapPin } from 'lucide-react';
+import { X, Plus, Building2, Mail, Phone, Globe, MapPin, Save } from 'lucide-react';
 import { categoryLabels } from '@/constants/categories';
-import type { CreateSupplierDto } from '@/api/types';
+import type { CreateSupplierDto, Supplier } from '@/api/types';
 
 interface SupplierFormProps {
-  onSubmit: (data: CreateSupplierDto) => void;
+  onSubmit: (data: any) => void;
   isLoading?: boolean;
+  initialData?: Supplier;
 }
 
-export function SupplierForm({ onSubmit, isLoading }: SupplierFormProps) {
+export function SupplierForm({ onSubmit, isLoading, initialData }: SupplierFormProps) {
   const [formData, setFormData] = useState<CreateSupplierDto>({
     name: '',
     category: 'edutech',
@@ -36,6 +37,31 @@ export function SupplierForm({ onSubmit, isLoading }: SupplierFormProps) {
     yearsInBusiness: undefined,
     clientCount: undefined
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        category: initialData.category || 'edutech',
+        description: initialData.description || '',
+        services: initialData.services || [],
+        contactPerson: initialData.contactPerson || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        website: initialData.website || '',
+        address: {
+          street: initialData.address?.street || '',
+          city: initialData.address?.city || '',
+          state: initialData.address?.state || '',
+          pincode: initialData.address?.pincode || '',
+          country: initialData.address?.country || 'India'
+        },
+        certifications: initialData.certifications || [],
+        yearsInBusiness: initialData.yearsInBusiness,
+        clientCount: initialData.clientCount
+      });
+    }
+  }, [initialData]);
 
   const [currentService, setCurrentService] = useState('');
   const [currentCertification, setCurrentCertification] = useState('');
@@ -373,7 +399,7 @@ export function SupplierForm({ onSubmit, isLoading }: SupplierFormProps) {
 
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isLoading || formData.services.length === 0}>
-          {isLoading ? 'Saving...' : 'Add Supplier'}
+          {isLoading ? 'Saving...' : initialData ? 'Update Supplier' : 'Add Supplier'}
         </Button>
       </div>
     </form>
