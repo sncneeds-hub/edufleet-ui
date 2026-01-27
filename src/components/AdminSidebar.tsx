@@ -8,7 +8,8 @@ import {
   Clock,
   CheckCircle,
   CreditCard,
-  Briefcase
+  Briefcase,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +50,11 @@ export function AdminSidebar({ pendingVehicles, pendingSuppliers }: AdminSidebar
       title: 'Jobs',
       icon: Briefcase,
       path: '/admin/jobs'
+    },
+       {
+      title: 'Users',
+      icon: Users,
+      path: '/admin/users'
     },
     {
       title: 'Suppliers',

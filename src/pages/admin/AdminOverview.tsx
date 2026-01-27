@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { api } from '@/api';
 import { useAds } from '@/context/AdContext';
-import { Car, Building2, Megaphone, TrendingUp, CreditCard } from 'lucide-react';
+import { Car, Building2, Megaphone, TrendingUp, CreditCard, Users } from 'lucide-react';
 import { DashboardSuggestion } from '@/components/DashboardSuggestion';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,7 +10,7 @@ export function AdminOverview() {
   const navigate = useNavigate();
   const { ads } = useAds();
   const [supplierStats, setSupplierStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, verified: 0 });
-  const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priority: 0 });
+  const [vehicleStats, setVehicleStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, priorityListings: 0 });
   const [subscriptionStats, setSubscriptionStats] = useState<any>(null);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function AdminOverview() {
         api.subscriptions.getGlobalSubscriptionStats()
       ]);
       setSupplierStats(supplierResponse.data);
-      setVehicleStats(vehicleResponse.data.vehicles);
+      setVehicleStats(vehicleResponse.data);
       if (subscriptionResponse.success) {
         setSubscriptionStats(subscriptionResponse.data);
       }
@@ -136,6 +136,20 @@ export function AdminOverview() {
 
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Users className="w-6 h-6 text-blue-600" />
+            </div>
+            <TrendingUp className="w-5 h-5 text-green-500" />
+          </div>
+          <p className="text-sm text-muted-foreground mb-1">Total Users</p>
+          <div className="text-3xl font-bold text-blue-600 mb-2">
+            {(vehicleStats as any).users || 0}
+          </div>
+          <div className="text-xs text-muted-foreground">Registered accounts</div>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-100 rounded-lg">
               <CreditCard className="w-6 h-6 text-green-600" />
             </div>
@@ -188,6 +202,15 @@ export function AdminOverview() {
             <Building2 className="w-8 h-8 text-secondary mb-2" />
             <h3 className="font-semibold mb-1">Review Suppliers</h3>
             <p className="text-sm text-muted-foreground">{supplierStats.pending} pending approval</p>
+          </button>
+
+          <button
+            onClick={() => navigate('/admin/users')}
+            className="p-4 border border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
+          >
+            <Users className="w-8 h-8 text-blue-500 mb-2" />
+            <h3 className="font-semibold mb-1">Manage Users</h3>
+            <p className="text-sm text-muted-foreground">View and manage all accounts</p>
           </button>
           
           <button

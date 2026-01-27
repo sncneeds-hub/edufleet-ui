@@ -177,6 +177,50 @@ export const adminService = {
   },
 
   /**
+   * Create a new user (admin)
+   */
+  async createUser(data: any): Promise<ApiResponse<any>> {
+    try {
+      const user = await apiClient.post<any>('/admin/users', data, { requiresAuth: true });
+
+      return {
+        success: true,
+        data: user,
+        message: 'User created successfully',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw {
+        success: false,
+        error: error.message || 'Failed to create user',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
+   * Delete a user (admin)
+   */
+  async deleteUser(userId: string): Promise<ApiResponse<void>> {
+    try {
+      await apiClient.delete<void>(`/admin/users/${userId}`, { requiresAuth: true });
+
+      return {
+        success: true,
+        data: undefined,
+        message: 'User deleted successfully',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw {
+        success: false,
+        error: error.message || 'Failed to delete user',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  /**
    * Approve/Reject supplier with optional plan update
    */
   async approveSupplierStatus(supplierId: string, data: { status: 'approved' | 'rejected'; planId?: string; notes?: string }): Promise<ApiResponse<any>> {

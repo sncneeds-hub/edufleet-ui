@@ -67,11 +67,15 @@ export function Header() {
     <header className="glass-nav sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 lg:px-6 py-4">
         <div className="flex justify-between items-center gap-4">
-          <Link to="/" className="text-2xl lg:text-3xl font-bold flex items-center gap-1.5 shrink-0 group">
-            <span className="text-primary font-display tracking-tight transition-colors group-hover:text-primary-light">Edu</span>
-            <span className="text-accent font-display tracking-tight transition-colors group-hover:text-accent-light">Fleet</span>
-            <span className="text-xs font-sans text-muted-foreground ml-1 hidden sm:inline">Exchange</span>
-          </Link>
+<Link to="/" className="flex items-center shrink-0 group">
+  <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full overflow-hidden">
+    <img
+      src="/logo.jpeg"
+      alt="EduFleet Exchange"
+      className="h-full w-full object-contain transition-transform group-hover:scale-105"
+    />
+  </div>
+</Link>
 
           {/* Search Bar - Visible on desktop inner pages */}
           {location.pathname !== '/' && (
