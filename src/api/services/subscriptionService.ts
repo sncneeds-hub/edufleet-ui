@@ -471,3 +471,23 @@ export const checkProductListingAccess = async (): Promise<any> => {
     timestamp: new Date().toISOString(),
   };
 };
+export const subscriptionService = {
+  getAllSubscriptionPlans,
+  getActiveSubscriptionPlans,
+  getSubscriptionPlanById,
+  createSubscriptionPlan,
+  updateSubscriptionPlan,
+  toggleSubscriptionPlanStatus,
+
+  getUserSubscription,
+  getAllUserSubscriptions,
+  assignSubscriptionToUser,
+  extendUserSubscription,
+  continueSubscription,
+  resetBrowseCount,
+  suspendUserSubscription,
+  reactivateUserSubscription,
+  cancelUserSubscription,
+
+  getSubscriptionUsageStats,
+};

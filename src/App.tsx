@@ -35,6 +35,7 @@ import { JobManagement } from '@/pages/admin/JobManagement';
 import { SupplierManagement } from '@/pages/admin/SupplierManagement';
 import { SubscriptionManagement } from '@/pages/admin/SubscriptionManagement';
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage';
+import UserManagement from '@/pages/admin/UserManagement';
 
 // Ad Management imports
 import { AdProvider } from '@/context/AdContext';
@@ -125,6 +126,7 @@ function App() {
                   <Route index element={<AdminOverview />} />
                   <Route path="vehicles/:type" element={<VehicleManagement />} />
                    <Route path="jobs" element={<JobManagement />} />
+                  <Route path="users" element={<UserManagement />} />
                   <Route path="suppliers/:type" element={<SupplierManagement />} />
                   <Route path="subscriptions" element={<SubscriptionManagement />} />
                   <Route path="settings" element={<AdminSettingsPage />} />

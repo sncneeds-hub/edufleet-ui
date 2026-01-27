@@ -8,9 +8,15 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <h3 className="font-bold text-lg mb-4">
-              <span className="text-gradient">EduFleet</span>
-            </h3>
+<Link to="/" className="flex items-center shrink-0 group">
+  <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full overflow-hidden">
+    <img
+      src="/logo.jpeg"
+      alt="EduFleet Exchange"
+      className="h-full w-full object-contain transition-transform group-hover:scale-105"
+    />
+  </div>
+</Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               The complete marketplace for educational institutions. Connect for vehicles, jobs, and supplies.
             </p>
